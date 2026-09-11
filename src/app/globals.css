@@ -1,0 +1,109 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ธีม shadcn/ui — โทนน้ำเงินเหล็กเดียวกับ mockup */
+:root {
+  --radius: 0.625rem;
+  --background: #f2f5f7;
+  --foreground: #14202b;
+  --card: #ffffff;
+  --card-foreground: #14202b;
+  --popover: #ffffff;
+  --popover-foreground: #14202b;
+  --primary: #1f5f8b;
+  --primary-foreground: #ffffff;
+  --secondary: #e8eef2;
+  --secondary-foreground: #14202b;
+  --muted: #e8eef2;
+  --muted-foreground: #4b5968;
+  --accent: #ddeaf4;
+  --accent-foreground: #1f5f8b;
+  --destructive: #b23a2e;
+  --border: #d4dce3;
+  --input: #d4dce3;
+  --ring: #1f5f8b;
+
+  /* สีสถานะเพิ่มเติม */
+  --subtle: #7a8896;
+  --ok: #2a7a4c;
+  --ok-soft: #ddf0e4;
+  --warn: #9a6414;
+  --warn-soft: #f7ebd3;
+  --bad-soft: #f6deda;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-subtle: var(--subtle);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-bad-soft: var(--bad-soft);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-body), system-ui, sans-serif;
+  --font-display: var(--font-display-face), var(--font-body), system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+}
+
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+@utility eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--subtle);
+}
+
+/* หน้าพิมพ์ใบแจ้งหนี้/ใบเสร็จ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

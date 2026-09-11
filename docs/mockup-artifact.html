@@ -1,0 +1,807 @@
+<title>บ้านสบาย Dorm Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --surface-2:#E8EEF2; --ink:#14202B; --ink-2:#4B5968; --ink-3:#7A8896;
+  --line:#D4DCE3; --accent:#1F5F8B; --accent-ink:#FFFFFF; --accent-soft:#DDEAF4;
+  --ok:#2A7A4C; --ok-soft:#DDF0E4; --warn:#9A6414; --warn-soft:#F7EBD3; --bad:#B23A2E; --bad-soft:#F6DEDA;
+  --meter:#9A6414; --shadow:0 1px 2px rgba(20,32,43,.06),0 8px 24px rgba(20,32,43,.08);
+  --f-display:"Chakra Petch","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E151B; --surface:#152029; --surface-2:#1C2934; --ink:#E5ECF2; --ink-2:#A2B2C0; --ink-3:#74879A;
+    --line:#293846; --accent:#72AAD8; --accent-ink:#0E151B; --accent-soft:#1B3246;
+    --ok:#62C08A; --ok-soft:#173526; --warn:#E3AA4E; --warn-soft:#382A12; --bad:#EA7A6D; --bad-soft:#3D1F1B;
+    --meter:#E3AA4E; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E151B; --surface:#152029; --surface-2:#1C2934; --ink:#E5ECF2; --ink-2:#A2B2C0; --ink-3:#74879A;
+  --line:#293846; --accent:#72AAD8; --accent-ink:#0E151B; --accent-soft:#1B3246;
+  --ok:#62C08A; --ok-soft:#173526; --warn:#E3AA4E; --warn-soft:#382A12; --bad:#EA7A6D; --bad-soft:#3D1F1B;
+  --meter:#E3AA4E; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.35); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.num,.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;text-wrap:balance;margin:0;letter-spacing:.01em}
+h2{font-size:22px} h3{font-size:16px}
+.muted{color:var(--ink-2)} .faint{color:var(--ink-3)}
+.label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding-inline:16px}
+.top-in{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand .plate{font-family:var(--f-display);font-weight:700;background:var(--ink);color:var(--bg);border-radius:6px;padding:2px 8px;font-size:15px;letter-spacing:.04em}
+.brand b{font-family:var(--f-display);font-size:17px;font-weight:600}
+.mockchip{font-size:11px;border:1px dashed var(--warn);color:var(--warn);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.seg{display:flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:8px;cursor:pointer;color:var(--ink-2);font-weight:500;white-space:nowrap}
+@media (max-width:600px){.top .seg{flex-wrap:nowrap;overflow-x:auto;width:100%}}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+
+.wrap{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:20px 60px}
+/* owner shell */
+.shell{display:grid;grid-template-columns:210px 1fr;gap:24px;align-items:start}
+.side{position:sticky;top:76px;display:flex;flex-direction:column;gap:2px}
+.side button{display:flex;justify-content:space-between;align-items:center;text-align:left;border:0;background:transparent;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--ink-2);font-weight:500}
+.side button:hover{background:var(--surface-2)}
+.side button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.side .count{font-family:var(--f-mono);font-size:12px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:0 7px;color:var(--ink-2)}
+.side .who{margin-top:16px;padding:12px;border-top:1px solid var(--line);font-size:12.5px}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  .side{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px}
+  .side button{white-space:nowrap}
+  .side .who{display:none}
+}
+.pagehead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.pagehead p{margin:2px 0 0}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.panel-b{padding:16px}
+
+.btn{border:1px solid var(--line);background:var(--surface);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:3px 10px;font-size:12.5px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:99px;padding:1px 9px;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-ok{background:var(--ok-soft);color:var(--ok)} .p-warn{background:var(--warn-soft);color:var(--warn)}
+.p-bad{background:var(--bad-soft);color:var(--bad)} .p-info{background:var(--accent-soft);color:var(--accent)}
+.p-mute{background:var(--surface-2);color:var(--ink-2)}
+
+/* dashboard */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .v{font-family:var(--f-display);font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:4px}
+.kpi .s{font-size:12.5px;color:var(--ink-2)}
+.dash{display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+@media (max-width:1060px){.dash{grid-template-columns:1fr}}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+@media (max-width:600px){.steps{grid-template-columns:1fr 1fr;row-gap:16px}}
+.steps li{position:relative;padding:0 10px 0 0}
+.steps .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:13px;border:2px solid var(--line);background:var(--surface);position:relative;z-index:1}
+.steps li::after{content:"";position:absolute;left:26px;right:0;top:12px;height:2px;background:var(--line)}
+.steps li:last-child::after{display:none}
+.steps .done .dot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps .now .dot{border-color:var(--accent);color:var(--accent)}
+.steps b{display:block;margin-top:8px;font-weight:600;font-size:13.5px}
+.steps small{color:var(--ink-2);font-size:12px;display:block}
+.bar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.occ{display:grid;gap:12px}
+.occ-row{display:grid;grid-template-columns:56px 1fr 90px;gap:10px;align-items:center;font-size:13px}
+.attn{list-style:none;margin:0;padding:0}
+.attn li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+.attn li:first-child{border-top:0;padding-top:0}
+.attn .t{flex:1;min-width:0}
+
+/* room map */
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 12px;cursor:pointer;font-family:var(--f-display);font-weight:600}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.floor{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center;padding:8px 0;border-top:1px dashed var(--line)}
+.floor:first-child{border-top:0}
+.floor .fl{font-family:var(--f-display);font-weight:600;color:var(--ink-3);font-size:13px}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:6px}
+.room{position:relative;text-align:left;border-radius:8px;padding:6px 8px;cursor:pointer;border:1px solid var(--line);background:var(--surface);min-height:54px}
+.room .rn{font-family:var(--f-display);font-weight:700;font-size:14px;letter-spacing:.02em}
+.room .rt{font-size:11px;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.room.OCCUPIED{background:var(--accent-soft);border-color:transparent}
+.room.VACANT{border-style:dashed;background:transparent}
+.room.RESERVED{background:var(--warn-soft);border-color:transparent}
+.room.MAINTENANCE{background:var(--bad-soft);border-color:transparent}
+.room .flag{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%}
+.room .flag.bad{background:var(--bad)} .room .flag.warn{background:var(--warn)}
+.room:hover{outline:2px solid var(--accent);outline-offset:-1px}
+
+/* tables */
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-weight:600;font-size:12px;color:var(--ink-2);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--surface)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.r,th.r{text-align:right}
+th.grp{text-align:center;border-bottom:1px solid var(--line);color:var(--meter)}
+.rd{width:96px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);font-family:var(--f-mono);text-align:right}
+.rd:focus{border-color:var(--accent);background:var(--surface)}
+.rd.err{border-color:var(--bad);background:var(--bad-soft)}
+.rd.done{border-color:var(--ok)}
+.hint{font-size:11.5px;display:block;margin-top:2px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.check{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13px}
+
+/* kanban */
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(220px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px}
+.col{background:var(--surface-2);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:200px}
+.col-h{display:flex;justify-content:space-between;font-weight:600;padding:2px 4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:6px}
+.card .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card .rn{font-family:var(--f-display);font-weight:700}
+.card select{border:1px solid var(--line);border-radius:6px;padding:3px 6px;background:var(--bg);font-size:12.5px;width:100%}
+.prio-URGENT{box-shadow:inset 3px 0 0 var(--bad)}
+
+/* settings */
+.set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.field{display:grid;gap:4px;margin-bottom:12px}
+.field label{font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.field input,.field select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--bg);width:100%}
+.field .unit{position:relative}
+.field .unit input{padding-right:64px}
+.field .unit span{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--ink-3)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fee{display:grid;grid-template-columns:auto 1fr 110px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.fee input[type=number]{border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:var(--bg);text-align:right;font-family:var(--f-mono);width:100%}
+.example{background:var(--surface-2);border-radius:10px;padding:12px 14px;font-size:13px}
+.example table td{padding:3px 0;border:0}
+
+/* phone */
+.phone-stage{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:40px;align-items:start;justify-content:center}
+@media (max-width:860px){.phone-stage{grid-template-columns:1fr;justify-items:center}}
+.phone{width:100%;max-width:370px;height:740px;border-radius:36px;border:10px solid var(--ink);background:var(--bg);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.liff-bar{background:var(--surface);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;align-items:center;gap:8px;font-size:13px}
+.liff-bar .x{font-size:18px;color:var(--ink-3)}
+.liff-bar b{flex:1;text-align:center;font-weight:600}
+.pscreen{flex:1;overflow-y:auto;padding:14px;display:grid;gap:12px;align-content:start}
+.pnav{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface)}
+.pnav button{border:0;background:transparent;padding:10px 0 12px;font-size:12px;color:var(--ink-3);cursor:pointer;display:grid;justify-items:center;gap:2px}
+.pnav button svg{width:20px;height:20px}
+.pnav button[aria-current="page"]{color:var(--accent);font-weight:600}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px}
+.bigamt{font-family:var(--f-display);font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.lines{display:grid;gap:6px;font-size:13px}
+.lines div{display:flex;justify-content:space-between;gap:8px}
+.qr{width:170px;height:170px;margin:10px auto;display:grid;grid-template-columns:repeat(25,1fr);background:#fff;padding:8px;border-radius:8px}
+.qr i{background:#111}
+.chat{display:grid;gap:10px}
+.bubble{background:var(--surface);border:1px solid var(--line);border-radius:4px 14px 14px 14px;padding:10px 12px;font-size:13px;max-width:92%}
+.bubble .h{font-weight:600;margin-bottom:4px}
+.aside-notes{max-width:520px}
+.aside-notes h3{margin-bottom:8px}
+.aside-notes ul{padding-left:18px;margin:6px 0 18px}
+.aside-notes li{margin:4px 0}
+.ta{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);width:100%;resize:vertical;min-height:80px}
+.psel{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);width:100%}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:4px 12px;cursor:pointer;font-size:13px}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* invoice doc */
+dialog{border:0;border-radius:14px;padding:0;max-width:min(760px,calc(100vw - 32px));width:100%;background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(10,18,26,.5)}
+.dlg-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.dlg-b{padding:16px;max-height:75vh;overflow-y:auto;background:var(--surface-2)}
+.doc{background:#fff;color:#1a1a1a;padding:28px 30px;border-radius:4px;font-size:13px;min-width:560px}
+.doc-wrap{overflow-x:auto}
+.doc .dh{display:flex;justify-content:space-between;gap:20px;border-bottom:2px solid #1a1a1a;padding-bottom:12px;margin-bottom:14px}
+.doc .dh h1{font-size:20px}
+.doc .dt{text-align:right}
+.doc .dt h1{font-size:18px}
+.doc .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-bottom:14px}
+.doc table th{background:#f0f0f0;color:#333;border-bottom:1px solid #999}
+.doc table td{border-bottom:1px solid #ddd;color:#1a1a1a}
+.doc .tot{display:flex;justify-content:space-between;gap:16px;margin-top:10px;align-items:flex-start}
+.doc .words{background:#f5f5f5;padding:8px 12px;border-radius:4px;flex:1}
+.doc .sum{min-width:220px}
+.doc .sum div{display:flex;justify-content:space-between;padding:2px 0}
+.doc .sum .g{font-weight:700;font-size:15px;border-top:1px solid #1a1a1a;margin-top:4px;padding-top:6px}
+.doc .sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;text-align:center}
+.doc .sign div{border-top:1px dotted #555;padding-top:6px}
+.doc .stamp{display:inline-block;border:2px solid #2A7A4C;color:#2A7A4C;font-weight:700;padding:2px 10px;border-radius:4px;transform:rotate(-6deg);font-family:var(--f-display)}
+
+/* blueprint */
+.bp{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1000px){.bp{grid-template-columns:1fr}}
+.flow{margin:0;padding-left:22px}
+.flow li{margin:0 0 10px;padding-left:4px}
+.flow li::marker{font-family:var(--f-display);font-weight:700;color:var(--accent)}
+.mermaid-box{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+pre.mermaid{margin:0;font-size:12px;color:var(--ink-2);white-space:pre}
+.stack td:first-child{font-weight:600;white-space:nowrap}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;font-size:13.5px;z-index:50;box-shadow:var(--shadow);max-width:calc(100vw - 32px)}
+@media (prefers-reduced-motion:no-preference){.toast{animation:up .2s ease-out}@keyframes up{from{transform:translate(-50%,8px);opacity:.3}}}
+</style>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span class="plate">บส</span><b>บ้านสบาย เรสซิเดนซ์</b><span class="mockchip">Mockup · ข้อมูลตัวอย่าง</span></div>
+    <nav class="seg" aria-label="มุมมองผู้ใช้">
+      <button data-role="owner" aria-pressed="true">เจ้าของ · เว็บ</button>
+      <button data-role="tenant" aria-pressed="false">ผู้เช่า · LINE</button>
+      <button data-role="tech" aria-pressed="false">ช่าง · มือถือ</button>
+      <button data-role="bp" aria-pressed="false">โครงสร้างระบบ</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="app"></main>
+<dialog id="dlg"></dialog>
+
+<script>
+/* ============ data ============ */
+const TODAY = new Date(2026,8,11);
+const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const TH_MF = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const thDate = d => `${d.getDate()} ${TH_M[d.getMonth()]} ${d.getFullYear()+543}`;
+const money = (n,dec=2) => Number(n).toLocaleString('th-TH',{minimumFractionDigits:dec,maximumFractionDigits:dec});
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = rng(2569); const ri=(a,b)=>Math.floor(R()*(b-a+1))+a; const pick=a=>a[Math.floor(R()*a.length)];
+
+const FIRST=['สมชาย','สุดา','ณัฐพล','พิมพ์ชนก','ธนากร','กมลวรรณ','อรุณ','ศิริพร','วีระ','ปวีณา','ภาณุ','จิราพร','ธีรเดช','นภัสสร','กิตติ','มนัสนันท์','อนุชา','รัตนา','ชยพล','ศุภิสรา','ปกรณ์','วรรณิดา'];
+const LAST=['ใจดี','ศรีสุข','วงศ์ทอง','แก้วมณี','บุญมา','สายสุวรรณ','ทองดี','รุ่งเรือง','พึ่งบุญ','มีสุข','จันทร์เพ็ญ','อินทร์แก้ว'];
+const TYPES={fan:{name:'ห้องพัดลม',rent:3500},air:{name:'ห้องแอร์',rent:4500},studio:{name:'สตูดิโอ',rent:6500}};
+
+const S = {
+  role:'owner', view:'dash', bld:'A', meterOnlyPending:false, invPeriod:'2026-08',
+  tenantTab:'home', techJob:null, payStep:0,
+  settings:{
+    water:{mode:'PER_UNIT',rate:18,min:100,flat:150},
+    elec:{mode:'PER_UNIT',rate:8,min:0,flat:600},
+    billingDay:25, issueDay:1, dueDay:5, autoIssue:false,
+    lateMode:'PER_DAY', lateAmt:50, lateMax:500, grace:0,
+    promptpay:'081-234-5678',
+    fees:[{id:'f1',name:'ค่าส่วนกลาง',amount:300,on:true},{id:'f2',name:'ค่าอินเทอร์เน็ต',amount:200,on:true},{id:'f3',name:'ค่าที่จอดรถ (เฉพาะสัญญาที่เลือก)',amount:500,on:false}]
+  },
+  buildings:[{id:'A',floors:5,per:10},{id:'B',floors:5,per:10},{id:'C',floors:4,per:8}],
+  rooms:[], invoices:[], tickets:[], seq:{INV:0,RC:0,MT:0}
+};
+
+S.buildings.forEach(b=>{
+  for(let f=1;f<=b.floors;f++) for(let n=1;n<=b.per;n++){
+    const no=`${b.id}-${f}${String(n).padStart(2,'0')}`;
+    const type = f===b.floors && b.id!=='C' ? 'studio' : (n<=3 && b.id==='C' ? 'fan' : (R()<.25?'fan':'air'));
+    const r=R(); const status = r<.84?'OCCUPIED':r<.93?'VACANT':r<.97?'RESERVED':'MAINTENANCE';
+    const wAugPrev=ri(80,900), wAugUse=ri(3,14), wUse=Math.max(2,wAugUse+ri(-3,3));
+    const eAugPrev=ri(1200,9000), eAugUse=type==='fan'?ri(40,110):ri(110,320), eUse=Math.max(20,eAugUse+ri(-40,40));
+    const room={id:no,no,b:b.id,floor:f,type,status,rent:TYPES[type].rent,
+      tenant:null,phone:null,start:null,end:null,
+      w:{aug0:wAugPrev,prev:wAugPrev+wAugUse,curr:null,use:wUse},
+      e:{aug0:eAugPrev,prev:eAugPrev+eAugUse,curr:null,use:eUse}};
+    if(status==='OCCUPIED'){
+      room.tenant=`${pick(FIRST)} ${pick(LAST)}`; room.phone=`08${ri(1,9)}-${ri(100,999)}-${ri(1000,9999)}`;
+      const sm=ri(0,20); room.start=new Date(2025,ri(0,11)-sm%6,ri(1,28)); room.end=new Date(room.start.getFullYear()+1,room.start.getMonth(),room.start.getDate());
+      if(room.end<TODAY) room.end=new Date(2026,ri(9,14),ri(1,28));
+      if(R()<.72){ room.w.curr=room.w.prev+wUse; room.e.curr=room.e.prev+eUse; }
+    }
+    S.rooms.push(room);
+  }
+});
+// fixed demo tenant + one anomaly
+const DEMO = S.rooms.find(r=>r.no==='A-305');
+Object.assign(DEMO,{status:'OCCUPIED',type:'air',rent:4500,tenant:'พิมพ์ชนก แก้วมณี',phone:'089-412-7730',start:new Date(2025,10,1),end:new Date(2026,10,1)});
+DEMO.w={aug0:412,prev:418,curr:null,use:6}; DEMO.e={aug0:5210,prev:5352,curr:null,use:142};
+const ANOM=S.rooms.find(r=>r.no==='B-207'); Object.assign(ANOM,{status:'OCCUPIED',tenant:ANOM.tenant||'ภาณุ ทองดี',phone:'086-220-1934',start:ANOM.start||new Date(2026,1,1)});
+ANOM.w.curr=ANOM.w.prev+41; ANOM.e.curr=ANOM.e.prev+ANOM.e.use;
+
+const roomById=id=>S.rooms.find(r=>r.id===id);
+const nextNo=(k,ym='202609')=>`${k}-${ym}-${String(++S.seq[k]).padStart(4,'0')}`;
+
+/* ============ billing engine (same rules server will use) ============ */
+function utilCharge(cfg,units){
+  if(cfg.mode==='FLAT') return {amt:cfg.flat,desc:'เหมาจ่าย'};
+  const raw=units*cfg.rate; const amt=Math.max(raw,cfg.min||0);
+  return {amt,desc: amt>raw?`ขั้นต่ำ ${money(cfg.min,0)} บาท`:''};
+}
+function buildLines(room,w0,w1,e0,e1){
+  const st=S.settings, L=[];
+  L.push({type:'RENT',desc:`ค่าเช่าห้อง (${TYPES[room.type].name})`,qty:1,unit:room.rent,amt:room.rent});
+  const wu=w1-w0, eu=e1-e0, wc=utilCharge(st.water,wu), ec=utilCharge(st.elec,eu);
+  L.push({type:'WATER',desc:'ค่าน้ำประปา'+(wc.desc?` · ${wc.desc}`:''),prev:st.water.mode==='FLAT'?null:w0,curr:st.water.mode==='FLAT'?null:w1,qty:st.water.mode==='FLAT'?1:wu,unit:st.water.mode==='FLAT'?st.water.flat:st.water.rate,amt:wc.amt});
+  L.push({type:'ELECTRIC',desc:'ค่าไฟฟ้า'+(ec.desc?` · ${ec.desc}`:''),prev:st.elec.mode==='FLAT'?null:e0,curr:st.elec.mode==='FLAT'?null:e1,qty:st.elec.mode==='FLAT'?1:eu,unit:st.elec.mode==='FLAT'?st.elec.flat:st.elec.rate,amt:ec.amt});
+  st.fees.filter(f=>f.on).forEach(f=>L.push({type:'FEE',desc:f.name,qty:1,unit:f.amount,amt:f.amount}));
+  return L;
+}
+const sumLines=L=>L.reduce((s,l)=>s+l.amt,0);
+function lateFee(due){
+  const st=S.settings; const days=Math.floor((TODAY-due)/864e5)-st.grace;
+  if(days<=0||st.lateMode==='NONE') return {days:Math.max(0,days),amt:0};
+  if(st.lateMode==='FIXED') return {days,amt:st.lateAmt};
+  return {days,amt:Math.min(days*st.lateAmt,st.lateMax||Infinity)};
+}
+
+// August invoices (issued)
+const AUG_DUE=new Date(2026,8,5);
+S.rooms.filter(r=>r.status==='OCCUPIED').forEach(r=>{
+  const x=R(); const status = r===DEMO?'PAID' : x<.8?'PAID':x<.9?'PENDING_REVIEW':'OVERDUE';
+  const inv={id:'aug-'+r.id,period:'2026-08',no:nextNo('INV','202608'),room:r.id,issue:new Date(2026,8,1),due:AUG_DUE,status,
+    lines:null,paidAt:status==='PAID'?new Date(2026,8,ri(1,5)):null,rc:null,
+    readings:{w0:r.w.aug0,w1:r.w.prev,e0:r.e.aug0,e1:r.e.prev}};
+  if(status==='PAID') inv.rc=nextNo('RC','202609');
+  S.invoices.push(inv);
+});
+
+// maintenance tickets
+const TECHS=['ช่างสมชาย','ช่างวิทย์'];
+[
+ ['A-305','แอร์','แอร์ไม่เย็น มีน้ำหยด','NORMAL','ASSIGNED','ช่างสมชาย','แอร์เปิดแล้วมีน้ำหยดตรงหัวเตียง ช่วงเย็นไม่ค่อยเย็น',2],
+ ['B-110','ประปา','ก๊อกอ่างล้างหน้ารั่ว','NORMAL','NEW',null,'น้ำซึมตลอดเวลา',0],
+ ['C-204','ไฟฟ้า','ปลั๊กห้องน้ำไม่มีไฟ','URGENT','NEW',null,'เบรกเกอร์ตัดบ่อย',0],
+ ['A-408','เฟอร์นิเจอร์','บานพับตู้เสื้อผ้าหลุด','LOW','IN_PROGRESS','ช่างวิทย์','',3],
+ ['B-305','ประปา','ชักโครกกดไม่ลง','URGENT','IN_PROGRESS','ช่างสมชาย','',1],
+ ['A-102','ไฟฟ้า','หลอดไฟระเบียงขาด','LOW','DONE','ช่างวิทย์','',6],
+ ['C-301','แอร์','ล้างแอร์ประจำปี','NORMAL','ASSIGNED','ช่างวิทย์','นัดช่วงบ่าย',1],
+ ['B-401','อื่น ๆ','ประตูห้องปิดไม่สนิท','NORMAL','DONE','ช่างสมชาย','',8],
+].forEach(([room,cat,title,prio,status,tech,desc,ago])=>{
+  const r=roomById(room); if(r.status!=='OCCUPIED'){r.status='OCCUPIED';r.tenant=r.tenant||`${pick(FIRST)} ${pick(LAST)}`;r.start=r.start||new Date(2026,0,1);}
+  S.tickets.push({id:'t'+S.tickets.length,no:nextNo('MT'),room,cat,title,desc,prio,status,tech,created:new Date(2026,8,11-ago),cost:status==='DONE'?ri(1,4)*100:null,charge:false,time:'ช่วงเย็นหลัง 17:00'});
+});
+const openTickets=()=>S.tickets.filter(t=>t.status!=='DONE'&&t.status!=='CANCELLED');
+
+/* ============ baht text (สำหรับใบเสร็จ) ============ */
+function readNum(n,cont){
+  const D=['ศูนย์','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'],P=['','สิบ','ร้อย','พัน','หมื่น','แสน'];
+  let out=''; if(n>=1e6){out+=readNum(Math.floor(n/1e6))+'ล้าน'; n%=1e6; if(!n) return out; cont=true;}
+  const s=String(n),len=s.length;
+  for(let i=0;i<len;i++){const d=+s[i],p=len-i-1; if(!d) continue;
+    if(p===1&&d===1) out+='สิบ'; else if(p===1&&d===2) out+='ยี่สิบ';
+    else if(p===0&&d===1&&(len>1||cont)) out+='เอ็ด'; else out+=D[d]+P[p];}
+  return out;
+}
+function bahtText(v){v=Math.round(v*100)/100;const b=Math.floor(v),s=Math.round((v-b)*100);
+  if(!b&&!s) return 'ศูนย์บาทถ้วน'; return (b?readNum(b)+'บาท':'')+(s?readNum(s)+'สตางค์':'ถ้วน');}
+
+/* ============ helpers ============ */
+const STATUS_TH={OCCUPIED:'มีผู้เช่า',VACANT:'ว่าง',RESERVED:'จองแล้ว',MAINTENANCE:'ปิดปรับปรุง'};
+const INV_PILL={PAID:['p-ok','ชำระแล้ว'],PENDING_REVIEW:['p-warn','รอตรวจสลิป'],OVERDUE:['p-bad','เกินกำหนด'],ISSUED:['p-info','ส่งบิลแล้ว'],DRAFT:['p-mute','บิลร่าง'],WAIT:['p-mute','รอจดมิเตอร์']};
+const TK_COL={NEW:'แจ้งใหม่',ASSIGNED:'มอบหมายแล้ว',IN_PROGRESS:'กำลังซ่อม',DONE:'เสร็จแล้ว'};
+const PRIO={URGENT:['p-bad','ด่วน'],NORMAL:['p-info','ปกติ'],LOW:['p-mute','ไม่ด่วน']};
+const pill=([c,t])=>`<span class="pill ${c}">${t}</span>`;
+function toast(msg){document.querySelector('.toast')?.remove();const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.append(t);setTimeout(()=>t.remove(),3200)}
+const occ=()=>S.rooms.filter(r=>r.status==='OCCUPIED');
+function invTotal(inv){const r=roomById(inv.room);const L=buildLines(r,inv.readings.w0,inv.readings.w1,inv.readings.e0,inv.readings.e1);
+  const lf=inv.status==='OVERDUE'?lateFee(inv.due):{amt:0,days:0}; if(lf.amt) L.push({type:'LATE_FEE',desc:`ค่าปรับชำระล่าช้า ${lf.days} วัน`,qty:1,unit:lf.amt,amt:lf.amt});
+  return {L,total:sumLines(L)};}
+function sepInvoices(){return occ().map(r=>{const ready=r.w.curr!=null&&r.e.curr!=null&&r.w.curr>=r.w.prev&&r.e.curr>=r.e.prev;
+  return {id:'sep-'+r.id,period:'2026-09',no:ready?`INV-202609-${String(occ().indexOf(r)+1).padStart(4,'0')}`:'—',room:r.id,status:ready?'DRAFT':'WAIT',
+   issue:new Date(2026,9,S.settings.issueDay),due:new Date(2026,9,S.settings.dueDay),readings:{w0:r.w.prev,w1:r.w.curr,e0:r.e.prev,e1:r.e.curr},ready}})}
+
+/* ============ render: shell ============ */
+const app=document.getElementById('app');
+function render(){
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.role===S.role));
+  if(S.role==='owner') app.innerHTML=ownerShell();
+  else if(S.role==='tenant') app.innerHTML=phoneStage(tenantScreen(),tenantNotes(),'บ้านสบาย · ผู้เช่า',tenantNav());
+  else if(S.role==='tech') app.innerHTML=phoneStage(techScreen(),techNotes(),'บ้านสบาย · ช่าง','');
+  else app.innerHTML=blueprint();
+  if(S.role==='bp' && window.mermaid?.run) try{window.mermaid.run()}catch(e){}
+}
+document.querySelector('.seg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;S.role=b.dataset.role;render();window.scrollTo(0,0)});
+
+function ownerShell(){
+  const items=[['dash','ภาพรวม'],['rooms','ผังห้อง',S.rooms.length],['meter','จดมิเตอร์',occ().filter(r=>r.w.curr==null||r.e.curr==null).length],['bills','บิล & ใบเสร็จ',S.invoices.filter(i=>i.status==='PENDING_REVIEW').length],['repair','แจ้งซ่อม',openTickets().length],['settings','ตั้งค่า']];
+  const views={dash,rooms:roomsView,meter:meterView,bills:billsView,repair:repairView,settings:settingsView};
+  return `<div class="shell"><nav class="side" aria-label="เมนูเจ้าของ">${items.map(([k,t,c])=>`<button data-view="${k}" ${S.view===k?'aria-current="page"':''}><span>${t}</span>${c!=null?`<span class="count">${c}</span>`:''}</button>`).join('')}
+    <div class="who"><div class="label">เข้าสู่ระบบในฐานะ</div><b>คุณจ๊อบ</b> · เจ้าของ<div class="faint">3 ตึก · ${S.rooms.length} ห้อง</div></div></nav>
+    <section>${views[S.view]()}</section></div>`;
+}
+app.addEventListener('click',e=>{
+  const v=e.target.closest('[data-view]'); if(v){S.view=v.dataset.view;render();return}
+  const a=e.target.closest('[data-act]'); if(a) ACT[a.dataset.act]?.(a,e);
+});
+
+/* ============ owner: dashboard ============ */
+function dash(){
+  const o=occ().length, tot=S.rooms.length;
+  const aug=S.invoices.filter(i=>i.period==='2026-08').map(i=>({...i,...invTotal(i)}));
+  const billed=aug.reduce((s,i)=>s+i.total,0), paid=aug.filter(i=>i.status==='PAID').reduce((s,i)=>s+i.total,0);
+  const overdue=aug.filter(i=>i.status==='OVERDUE'), pend=aug.filter(i=>i.status==='PENDING_REVIEW');
+  const read=occ().filter(r=>r.w.curr!=null&&r.e.curr!=null).length;
+  const st=S.settings;
+  const ending=occ().filter(r=>r.end&&(r.end-TODAY)/864e5<=60&&r.end>=TODAY).length;
+  const urgent=openTickets().filter(t=>t.prio==='URGENT');
+  return `<div class="pagehead"><div><h2>ภาพรวม</h2><p class="muted">วันนี้ ${thDate(TODAY)} · รอบบิลปัจจุบัน ${TH_MF[8]} ${2569}</p></div>
+   <button class="btn primary" data-view="meter">ไปจดมิเตอร์</button></div>
+  <div class="kpis">
+    <div class="kpi"><div class="label">อัตราเข้าพัก</div><div class="v">${Math.round(o/tot*100)}%</div><div class="s">${o} / ${tot} ห้อง</div></div>
+    <div class="kpi"><div class="label">เรียกเก็บ ส.ค.</div><div class="v">${money(billed,0)}</div><div class="s">บาท · ${aug.length} บิล</div></div>
+    <div class="kpi"><div class="label">รับชำระแล้ว</div><div class="v">${money(paid,0)}</div><div class="s">${Math.round(paid/billed*100)}% ของยอดเรียกเก็บ</div></div>
+    <div class="kpi"><div class="label">ค้างชำระ</div><div class="v" style="color:var(--bad)">${overdue.length}</div><div class="s">ห้อง · ${money(overdue.reduce((s,i)=>s+i.total,0),0)} บาท</div></div>
+    <div class="kpi"><div class="label">งานซ่อมค้าง</div><div class="v">${openTickets().length}</div><div class="s">ด่วน ${urgent.length} งาน</div></div>
+  </div>
+  <div class="dash">
+   <div style="display:grid;gap:16px;align-content:start">
+    <div class="panel"><div class="panel-h"><h3>รอบบิล ${TH_M[8]} 2569</h3><span class="faint" style="font-size:12.5px">${st.autoIssue?'ส่งบิลอัตโนมัติเมื่อจดครบ':'ตรวจบิลร่างก่อนส่ง'}</span></div>
+     <div class="panel-b"><ol class="steps">
+      <li class="now"><span class="dot">1</span><b>จดมิเตอร์</b><small>${read}/${o} ห้อง</small><div class="bar" style="margin-top:6px;margin-right:10px"><i style="width:${read/o*100}%"></i></div></li>
+      <li><span class="dot">2</span><b>ตรวจบิลร่าง</b><small>สร้างวันที่ ${st.billingDay} ${TH_M[8]}</small></li>
+      <li><span class="dot">3</span><b>ส่งบิลทาง LINE</b><small>วันที่ ${st.issueDay} ${TH_M[9]}</small></li>
+      <li><span class="dot">4</span><b>ครบกำหนดชำระ</b><small>วันที่ ${st.dueDay} ${TH_M[9]}</small></li>
+     </ol></div></div>
+    <div class="panel"><div class="panel-h"><h3>การเข้าพักรายตึก</h3><button class="btn sm" data-view="rooms">ดูผังห้อง</button></div>
+     <div class="panel-b occ">${S.buildings.map(b=>{const rs=S.rooms.filter(r=>r.b===b.id),oc=rs.filter(r=>r.status==='OCCUPIED').length;
+      return `<div class="occ-row"><b style="font-family:var(--f-display)">ตึก ${b.id}</b><div class="bar"><i style="width:${oc/rs.length*100}%"></i></div><span class="num muted" style="text-align:right">${oc}/${rs.length}</span></div>`}).join('')}</div></div>
+   </div>
+   <div class="panel"><div class="panel-h"><h3>ต้องจัดการ</h3></div><div class="panel-b"><ul class="attn">
+     ${pend.slice(0,3).map(i=>`<li>${pill(INV_PILL.PENDING_REVIEW)}<div class="t">ห้อง <b>${i.room}</b> แนบสลิป ${money(i.total)} บาท</div><button class="btn sm" data-act="openInv" data-id="${i.id}">ตรวจ</button></li>`).join('')}
+     ${overdue.slice(0,3).map(i=>`<li>${pill(INV_PILL.OVERDUE)}<div class="t">ห้อง <b>${i.room}</b> ค้าง ${money(i.total)} บาท <span class="faint">(รวมค่าปรับ)</span></div><button class="btn sm" data-act="openInv" data-id="${i.id}">ดูบิล</button></li>`).join('')}
+     ${urgent.map(t=>`<li>${pill(PRIO.URGENT)}<div class="t">ห้อง <b>${t.room}</b> ${esc(t.title)}</div><button class="btn sm" data-view="repair">จัดการ</button></li>`).join('')}
+     <li>${pill(['p-info','สัญญา'])}<div class="t">สัญญาใกล้หมดใน 60 วัน <b>${ending}</b> ห้อง</div></li>
+     <li>${pill(['p-warn','มิเตอร์'])}<div class="t">ห้อง <b>B-207</b> ใช้น้ำ 41 หน่วย สูงกว่าปกติ ~4 เท่า</div><button class="btn sm" data-view="meter">ตรวจ</button></li>
+   </ul></div></div>
+  </div>`;
+}
+
+/* ============ owner: rooms ============ */
+function roomsView(){
+  const b=S.buildings.find(x=>x.id===S.bld); const rs=S.rooms.filter(r=>r.b===b.id);
+  const overdueRooms=new Set(S.invoices.filter(i=>i.status==='OVERDUE').map(i=>i.room));
+  const repairRooms=new Set(openTickets().map(t=>t.room));
+  let floors=''; for(let f=b.floors;f>=1;f--){ floors+=`<div class="floor"><span class="fl">ชั้น ${f}</span><div class="rooms">${rs.filter(r=>r.floor===f).map(r=>
+    `<button class="room ${r.status}" data-act="openRoom" data-id="${r.id}" aria-label="ห้อง ${r.no} ${STATUS_TH[r.status]}">
+      ${overdueRooms.has(r.id)?'<i class="flag bad" title="ค้างชำระ"></i>':repairRooms.has(r.id)?'<i class="flag warn" title="มีงานซ่อม"></i>':''}
+      <span class="rn">${r.no.split('-')[1]}</span><span class="rt">${r.tenant?esc(r.tenant.split(' ')[0]):STATUS_TH[r.status]}</span></button>`).join('')}</div></div>`}
+  return `<div class="pagehead"><div><h2>ผังห้อง</h2><p class="muted">กดที่ห้องเพื่อดูผู้เช่า สัญญา มิเตอร์ และบิล</p></div>
+    <div class="tabs">${S.buildings.map(x=>`<button data-act="bld" data-id="${x.id}" aria-pressed="${x.id===S.bld}">ตึก ${x.id}</button>`).join('')}</div></div>
+   <div class="panel"><div class="panel-h"><div class="legend">
+     <span><i style="background:var(--accent-soft)"></i>มีผู้เช่า</span><span><i style="border:1px dashed var(--ink-3)"></i>ว่าง</span>
+     <span><i style="background:var(--warn-soft)"></i>จองแล้ว</span><span><i style="background:var(--bad-soft)"></i>ปิดปรับปรุง</span>
+     <span><i style="background:var(--bad);border-radius:50%;width:8px;height:8px"></i>ค้างชำระ</span><span><i style="background:var(--warn);border-radius:50%;width:8px;height:8px"></i>มีงานซ่อม</span></div>
+     <span class="muted num" style="font-size:12.5px">ว่าง ${rs.filter(r=>r.status==='VACANT').length} ห้อง</span></div>
+   <div class="panel-b">${floors}</div></div>`;
+}
+
+/* ============ owner: meter ============ */
+function meterRowCalc(r){
+  const w=r.w,e=r.e; const wOk=w.curr!=null&&w.curr>=w.prev, eOk=e.curr!=null&&e.curr>=e.prev;
+  const total = wOk&&eOk? sumLines(buildLines(r,w.prev,w.curr,e.prev,e.curr)):null;
+  const avgW=w.prev-w.aug0, anomaly = wOk && (w.curr-w.prev) > Math.max(10,avgW*2.5);
+  return {wOk,eOk,total,anomaly};
+}
+function meterCell(r,k){
+  const m=r[k], c=m.curr, bad=c!=null&&c<m.prev;
+  return `<td class="r num faint">${money(m.prev,0)}</td>
+   <td><input class="rd ${bad?'err':c!=null?'done':''}" id="rd-${k}-${r.id}" data-room="${r.id}" data-k="${k}" type="number" inputmode="decimal" value="${c??''}" placeholder="—" aria-label="เลขมิเตอร์${k==='w'?'น้ำ':'ไฟ'} ห้อง ${r.no}"></td>
+   <td class="r num" id="u-${k}-${r.id}">${c!=null&&!bad?money(c-m.prev,0):'—'}</td>`;
+}
+function meterView(){
+  const all=occ().filter(r=>r.b===S.bld); const rs=S.meterOnlyPending?all.filter(r=>r.w.curr==null||r.e.curr==null):all;
+  const done=all.filter(r=>r.w.curr!=null&&r.e.curr!=null).length; const st=S.settings;
+  return `<div class="pagehead"><div><h2>จดมิเตอร์ · ${TH_MF[8]} 2569</h2><p class="muted">เลขครั้งก่อนดึงมาให้อัตโนมัติ กรอกเฉพาะเลขใหม่ · ยอดบิลคำนวณตามหน้าตั้งค่า</p></div>
+   <button class="btn primary" data-act="draft">สร้างบิลร่างรอบนี้</button></div>
+  <div class="panel"><div class="panel-h"><div class="toolbar">
+     <div class="tabs">${S.buildings.map(x=>`<button data-act="bld" data-id="${x.id}" aria-pressed="${x.id===S.bld}">ตึก ${x.id}</button>`).join('')}</div>
+     <label class="check"><input type="checkbox" id="onlyPending" data-act="onlyPending" ${S.meterOnlyPending?'checked':''}> เฉพาะห้องที่ยังไม่จด</label></div>
+     <div style="min-width:180px"><div class="muted" style="font-size:12.5px;margin-bottom:4px" id="mprog">จดแล้ว <b class="num">${done}</b> / ${all.length} ห้อง</div><div class="bar"><i id="mbar" style="width:${done/all.length*100}%"></i></div></div></div>
+   <div class="tbl-wrap"><table><thead>
+     <tr><th rowspan="2">ห้อง</th><th rowspan="2">ผู้เช่า</th><th colspan="3" class="grp">น้ำ · ${st.water.mode==='FLAT'?'เหมาจ่าย':money(st.water.rate,0)+' ฿/หน่วย'}</th><th colspan="3" class="grp">ไฟ · ${st.elec.mode==='FLAT'?'เหมาจ่าย':money(st.elec.rate,0)+' ฿/หน่วย'}</th><th rowspan="2" class="r">ยอดบิล (บาท)</th></tr>
+     <tr><th class="r">ครั้งก่อน</th><th>ครั้งนี้</th><th class="r">หน่วย</th><th class="r">ครั้งก่อน</th><th>ครั้งนี้</th><th class="r">หน่วย</th></tr></thead>
+   <tbody>${rs.map(r=>{const c=meterRowCalc(r);return `<tr><td><b style="font-family:var(--f-display)">${r.no}</b></td><td>${esc(r.tenant)}<span class="hint faint" id="h-${r.id}">${c.anomaly?'<span class="pill p-warn">ใช้น้ำสูงผิดปกติ</span>':''}</span></td>
+     ${meterCell(r,'w')}${meterCell(r,'e')}<td class="r num" id="t-${r.id}"><b>${c.total!=null?money(c.total):'—'}</b></td></tr>`}).join('')||'<tr><td colspan="9" class="muted">จดครบทุกห้องแล้ว</td></tr>'}</tbody></table></div>
+   <div class="panel-b faint" style="font-size:12.5px;border-top:1px solid var(--line)">ห้องที่เพิ่งเข้าอยู่: ระบบใช้เลขที่จดตอนทำสัญญา (จดครั้งแรก) เป็นเลขตั้งต้น · เลขน้อยกว่าครั้งก่อน = มิเตอร์วนรอบหรือเปลี่ยนมิเตอร์ ให้บันทึกเปลี่ยนมิเตอร์ในหน้าห้อง</div></div>`;
+}
+app.addEventListener('input',e=>{
+  const i=e.target;
+  if(i.classList.contains('rd')){
+    const r=roomById(i.dataset.room), k=i.dataset.k, m=r[k]; m.curr=i.value===''?null:Number(i.value);
+    const bad=m.curr!=null&&m.curr<m.prev; i.classList.toggle('err',bad); i.classList.toggle('done',m.curr!=null&&!bad);
+    document.getElementById(`u-${k}-${r.id}`).textContent=m.curr!=null&&!bad?money(m.curr-m.prev,0):'—';
+    const c=meterRowCalc(r); document.getElementById('t-'+r.id).innerHTML=`<b>${c.total!=null?money(c.total):'—'}</b>`;
+    document.getElementById('h-'+r.id).innerHTML=bad?'<span class="pill p-bad">เลขน้อยกว่าครั้งก่อน</span>':c.anomaly?'<span class="pill p-warn">ใช้น้ำสูงผิดปกติ</span>':'';
+    const all=occ().filter(x=>x.b===S.bld), done=all.filter(x=>x.w.curr!=null&&x.e.curr!=null).length;
+    document.getElementById('mprog').innerHTML=`จดแล้ว <b class="num">${done}</b> / ${all.length} ห้อง`; document.getElementById('mbar').style.width=done/all.length*100+'%';
+    return;
+  }
+  if(i.dataset.set) { setSetting(i); }
+});
+app.addEventListener('change',e=>{
+  const i=e.target;
+  if(i.id==='onlyPending'){S.meterOnlyPending=i.checked;render();return}
+  if(i.dataset.set) {setSetting(i);render();}
+  if(i.dataset.assign){const t=S.tickets.find(x=>x.id===i.dataset.assign);t.tech=i.value||null;if(t.tech&&t.status==='NEW')t.status='ASSIGNED';render();toast(t.tech?`มอบงาน ${t.no} ให้${t.tech} · แจ้งเตือนช่างทาง LINE (mock)`:'ยกเลิกการมอบหมาย')}
+  if(i.id==='invPeriod'){S.invPeriod=i.value;render()}
+});
+
+/* ============ owner: bills ============ */
+function billsView(){
+  const list = S.invPeriod==='2026-08' ? S.invoices.filter(i=>i.period==='2026-08') : sepInvoices();
+  const rows=list.map(i=>({...i,...(i.status==='WAIT'?{total:null}:invTotal(i))}));
+  const cnt=k=>rows.filter(r=>r.status===k).length;
+  return `<div class="pagehead"><div><h2>บิล & ใบเสร็จ</h2><p class="muted">ใบแจ้งหนี้และใบเสร็จรับเงินรูปแบบมาตรฐาน · เลขที่เอกสารรันต่อเนื่องรายเดือน</p></div>
+   <div class="field" style="margin:0;min-width:200px"><label for="invPeriod">รอบบิล</label><select id="invPeriod"><option value="2026-08" ${S.invPeriod==='2026-08'?'selected':''}>ส.ค. 2569 · ส่งแล้ว</option><option value="2026-09" ${S.invPeriod==='2026-09'?'selected':''}>ก.ย. 2569 · ร่าง</option></select></div></div>
+  <div class="panel"><div class="panel-h"><div class="legend">${S.invPeriod==='2026-08'
+     ?`${pill(INV_PILL.PAID)} ${cnt('PAID')} ${pill(INV_PILL.PENDING_REVIEW)} ${cnt('PENDING_REVIEW')} ${pill(INV_PILL.OVERDUE)} ${cnt('OVERDUE')}`
+     :`${pill(INV_PILL.DRAFT)} ${cnt('DRAFT')} ${pill(INV_PILL.WAIT)} ${cnt('WAIT')}`}</div>
+     ${S.invPeriod==='2026-09'?`<button class="btn primary sm" data-act="issueAll">ส่งบิลร่างทั้งหมดทาง LINE</button>`:''}</div>
+  <div class="tbl-wrap"><table><thead><tr><th>เลขที่</th><th>ห้อง</th><th>ผู้เช่า</th><th class="r">ยอดรวม (บาท)</th><th>ครบกำหนด</th><th>สถานะ</th><th></th></tr></thead>
+  <tbody>${rows.slice(0,60).map(i=>`<tr><td class="mono">${i.no}</td><td><b style="font-family:var(--f-display)">${i.room}</b></td><td>${esc(roomById(i.room).tenant)}</td>
+    <td class="r num">${i.total!=null?money(i.total):'—'}</td><td>${thDate(i.due)}</td><td>${pill(INV_PILL[i.status])}</td>
+    <td class="r">${i.status==='WAIT'?`<button class="btn sm" data-view="meter">จดมิเตอร์</button>`:`<button class="btn sm" data-act="openInv" data-id="${i.id}">${i.status==='PENDING_REVIEW'?'ตรวจสลิป':'ดู'}</button>`}</td></tr>`).join('')}</tbody></table></div>
+  ${rows.length>60?`<div class="panel-b faint" style="border-top:1px solid var(--line)">แสดง 60 จาก ${rows.length} รายการ</div>`:''}</div>`;
+}
+function invDoc(inv,kind){
+  const r=roomById(inv.room),{L,total}=invTotal(inv), rc=kind==='RC';
+  return `<div class="doc-wrap"><div class="doc">
+   <div class="dh"><div><h1>บ้านสบาย เรสซิเดนซ์</h1><div>99/9 ซ.งามวงศ์วาน 21 ต.ลาดยาว อ.จตุจักร กรุงเทพฯ 10900</div><div>โทร 02-000-0000</div></div>
+    <div class="dt"><h1>${rc?'ใบเสร็จรับเงิน':'ใบแจ้งหนี้'}</h1><div style="color:#666">${rc?'RECEIPT':'INVOICE'}</div>${rc?'<div style="margin-top:6px"><span class="stamp">ชำระแล้ว</span></div>':''}</div></div>
+   <div class="meta">
+    <div><b>ผู้เช่า:</b> ${esc(r.tenant)}</div><div><b>เลขที่:</b> <span class="mono">${rc?inv.rc:inv.no}</span></div>
+    <div><b>ห้อง:</b> ${r.no} (${TYPES[r.type].name})</div><div><b>วันที่:</b> ${thDate(rc?inv.paidAt:inv.issue)}</div>
+    <div><b>รอบบิล:</b> ${inv.period==='2026-08'?'สิงหาคม 2569':'กันยายน 2569'}</div><div>${rc?`<b>อ้างอิงใบแจ้งหนี้:</b> <span class="mono">${inv.no}</span>`:`<b>ครบกำหนดชำระ:</b> ${thDate(inv.due)}`}</div>
+   </div>
+   <table><thead><tr><th>#</th><th>รายการ</th><th class="r">เลขก่อน</th><th class="r">เลขหลัง</th><th class="r">จำนวน</th><th class="r">ราคา/หน่วย</th><th class="r">จำนวนเงิน</th></tr></thead>
+   <tbody>${L.map((l,ix)=>`<tr><td>${ix+1}</td><td>${esc(l.desc)}</td><td class="r num">${l.prev!=null?money(l.prev,0):''}</td><td class="r num">${l.curr!=null?money(l.curr,0):''}</td>
+    <td class="r num">${money(l.qty,0)}</td><td class="r num">${money(l.unit)}</td><td class="r num">${money(l.amt)}</td></tr>`).join('')}</tbody></table>
+   <div class="tot"><div class="words"><b>(${bahtText(total)})</b></div><div class="sum"><div><span>รวมเป็นเงิน</span><span class="num">${money(total)}</span></div><div class="g"><span>ยอดสุทธิ</span><span class="num">${money(total)}</span></div></div></div>
+   ${rc?`<p style="margin-top:12px">ชำระโดย: โอนผ่าน PromptPay · วันที่ ${thDate(inv.paidAt)}</p>`:`<p style="margin-top:12px">ชำระผ่าน PromptPay <b class="mono">${S.settings.promptpay}</b> หรือสแกน QR ใน LINE · ชำระหลังวันที่ ${S.settings.dueDay} ${S.settings.lateMode==='PER_DAY'?`ปรับวันละ ${S.settings.lateAmt} บาท (สูงสุด ${S.settings.lateMax} บาท)`:S.settings.lateMode==='FIXED'?`ปรับ ${S.settings.lateAmt} บาท`:''}</p>`}
+   <div class="sign"><div>${rc?'ผู้รับเงิน':'ผู้ออกใบแจ้งหนี้'}</div><div>${rc?'ผู้จ่ายเงิน':'ผู้รับใบแจ้งหนี้'}</div></div>
+  </div></div>`;
+}
+function openInv(id,kind){
+  const inv=S.invoices.find(i=>i.id===id)||sepInvoices().find(i=>i.id===id); const d=document.getElementById('dlg');
+  kind=kind||(inv.status==='PAID'?'RC':'INV');
+  d.innerHTML=`<div class="dlg-h"><div class="toolbar"><b>${inv.room}</b>${pill(INV_PILL[inv.status])}
+    ${inv.status==='PAID'?`<div class="seg"><button data-k="INV" aria-pressed="${kind==='INV'}">ใบแจ้งหนี้</button><button data-k="RC" aria-pressed="${kind==='RC'}">ใบเสร็จ</button></div>`:''}</div>
+   <div class="toolbar">${inv.status==='PENDING_REVIEW'?`<button class="btn" data-dact="reject">ปฏิเสธสลิป</button><button class="btn primary" data-dact="confirm">ยืนยันรับเงิน & ออกใบเสร็จ</button>`:''}
+    ${inv.status==='OVERDUE'?`<button class="btn" data-dact="remind">ส่งเตือนทาง LINE</button><button class="btn primary" data-dact="cash">บันทึกรับเงินสด</button>`:''}
+    <button class="btn" data-dact="pdf">ดาวน์โหลด PDF</button><button class="btn" data-dact="close" aria-label="ปิด">ปิด</button></div></div>
+   <div class="dlg-b">${inv.status==='PENDING_REVIEW'?`<div class="panel" style="margin-bottom:12px;padding:12px 14px;display:flex;gap:14px;align-items:center;flex-wrap:wrap"><div style="width:64px;height:88px;border-radius:6px;background:var(--surface-2);display:grid;place-items:center;font-size:11px" class="faint">สลิป</div><div><b>สลิปจากผู้เช่า</b> · ${thDate(new Date(2026,8,10))} 20:14<br><span class="muted">ยอดโอน ${money(invTotal(inv).total)} บาท · ตรงกับยอดบิล</span><br><span class="faint" style="font-size:12px">ต่อระบบตรวจสลิปอัตโนมัติภายหลัง (ตอนนี้เจ้าของกดยืนยันเอง)</span></div></div>`:''}${invDoc(inv,kind)}</div>`;
+  d.onclick=ev=>{
+    const k=ev.target.closest('[data-k]'); if(k){openInv(id,k.dataset.k);return}
+    const a=ev.target.closest('[data-dact]')?.dataset.dact; if(!a) return;
+    if(a==='close'){d.close();return}
+    if(a==='pdf'){toast('ระบบจริง: สร้าง PDF ฝั่ง server (Puppeteer) แล้วเก็บไฟล์');return}
+    if(a==='remind'){toast(`ส่งข้อความเตือนห้อง ${inv.room} แล้ว (mock)`);return}
+    if(a==='confirm'||a==='cash'){inv.status='PAID';inv.paidAt=TODAY;inv.rc=nextNo('RC');openInv(id,'RC');render();toast(`ออกใบเสร็จ ${inv.rc} แล้ว`);return}
+    if(a==='reject'){inv.status='OVERDUE';d.close();render();toast('ปฏิเสธสลิปและแจ้งผู้เช่าให้ส่งใหม่ (mock)')}
+  };
+  if(!d.open) d.showModal();
+}
+
+/* ============ owner: repair ============ */
+function repairView(){
+  const cols=['NEW','ASSIGNED','IN_PROGRESS','DONE'];
+  return `<div class="pagehead"><div><h2>แจ้งซ่อม</h2><p class="muted">ผู้เช่าแจ้งผ่าน LINE · เจ้าของมอบงาน · ช่างอัปเดตสถานะจากมือถือ</p></div></div>
+  <div class="kanban">${cols.map(c=>{const ts=S.tickets.filter(t=>t.status===c);return `<div class="col"><div class="col-h"><span>${TK_COL[c]}</span><span class="count num faint">${ts.length}</span></div>
+   ${ts.map(t=>`<div class="card prio-${t.prio}"><div class="row"><span class="rn">${t.room}</span>${pill(PRIO[t.prio])}</div>
+     <div><b>${esc(t.title)}</b><div class="faint" style="font-size:12px">${t.cat} · ${t.no} · ${thDate(t.created)}</div></div>
+     ${c==='DONE'?`<div class="muted" style="font-size:12.5px">${t.tech} · ค่าใช้จ่าย ${money(t.cost||0,0)} บาท${t.charge?' · เก็บกับผู้เช่า':''}</div>`
+      :`<select data-assign="${t.id}" aria-label="มอบหมายช่าง ${t.no}"><option value="">— เลือกช่าง —</option>${TECHS.map(x=>`<option ${t.tech===x?'selected':''}>${x}</option>`).join('')}</select>`}
+   </div>`).join('')}</div>`}).join('')}</div>`;
+}
+
+/* ============ owner: settings ============ */
+function setSetting(i){
+  const path=i.dataset.set.split('.'); let o=S.settings; for(let k=0;k<path.length-1;k++) o=o[path[k]];
+  const last=path[path.length-1]; o[last]= i.type==='checkbox'?i.checked : i.type==='number'?Number(i.value):i.value;
+  const ex=document.getElementById('example'); if(ex) ex.innerHTML=exampleBill();
+}
+function exampleBill(){
+  const r=DEMO; const L=buildLines(r,418,424,5352,5494);
+  return `<div class="label" style="margin-bottom:6px">ตัวอย่างบิล · ห้อง A-305 ใช้น้ำ 6 หน่วย ไฟ 142 หน่วย</div><table>${L.map(l=>`<tr><td>${esc(l.desc)}</td><td class="r num">${money(l.amt)}</td></tr>`).join('')}
+   <tr><td><b>รวม</b></td><td class="r num"><b>${money(sumLines(L))}</b></td></tr></table>`;
+}
+function utilFields(k,label){const u=S.settings[k];return `<h3 style="margin-bottom:10px">${label}</h3>
+  <div class="field"><label for="${k}-mode">วิธีคิด</label><select id="${k}-mode" data-set="${k}.mode"><option value="PER_UNIT" ${u.mode==='PER_UNIT'?'selected':''}>ตามหน่วยมิเตอร์</option><option value="FLAT" ${u.mode==='FLAT'?'selected':''}>เหมาจ่ายรายเดือน</option></select></div>
+  ${u.mode==='FLAT'?`<div class="field"><label for="${k}-flat">ราคาเหมา</label><div class="unit"><input id="${k}-flat" type="number" data-set="${k}.flat" value="${u.flat}"><span>บาท/เดือน</span></div></div>`
+  :`<div class="two"><div class="field"><label for="${k}-rate">ราคาต่อหน่วย</label><div class="unit"><input id="${k}-rate" type="number" step="0.5" data-set="${k}.rate" value="${u.rate}"><span>บาท</span></div></div>
+   <div class="field"><label for="${k}-min">ขั้นต่ำ</label><div class="unit"><input id="${k}-min" type="number" data-set="${k}.min" value="${u.min}"><span>บาท</span></div></div></div>`}`}
+function settingsView(){const st=S.settings;
+  return `<div class="pagehead"><div><h2>ตั้งค่า</h2><p class="muted">ค่าทุกอย่างมีผลกับบิลรอบถัดไป · เก็บประวัติอัตราไว้ ใช้คำนวณบิลย้อนหลังได้ถูกต้อง</p></div></div>
+  <div class="set-grid">
+   <div class="panel panel-b">${utilFields('water','ค่าน้ำ')}<div style="height:8px"></div>${utilFields('elec','ค่าไฟ')}</div>
+   <div class="panel panel-b"><h3 style="margin-bottom:10px">รอบบิล</h3>
+    <div class="two"><div class="field"><label for="s-bday">สร้างบิลร่างทุกวันที่</label><input id="s-bday" type="number" min="1" max="28" data-set="billingDay" value="${st.billingDay}"></div>
+    <div class="field"><label for="s-iday">ส่งบิลวันที่</label><input id="s-iday" type="number" min="1" max="28" data-set="issueDay" value="${st.issueDay}"></div></div>
+    <div class="field"><label for="s-dday">ครบกำหนดชำระวันที่</label><input id="s-dday" type="number" min="1" max="28" data-set="dueDay" value="${st.dueDay}"></div>
+    <label class="check" style="margin-bottom:14px"><input type="checkbox" id="s-auto" data-set="autoIssue" ${st.autoIssue?'checked':''}> ส่งบิลอัตโนมัติเมื่อจดมิเตอร์ครบ (ไม่ต้องกดยืนยัน)</label>
+    <h3 style="margin:6px 0 10px">ค่าปรับชำระล่าช้า</h3>
+    <div class="field"><label for="s-lmode">รูปแบบ</label><select id="s-lmode" data-set="lateMode"><option value="NONE" ${st.lateMode==='NONE'?'selected':''}>ไม่มีค่าปรับ</option><option value="FIXED" ${st.lateMode==='FIXED'?'selected':''}>ปรับครั้งเดียว</option><option value="PER_DAY" ${st.lateMode==='PER_DAY'?'selected':''}>ปรับรายวัน</option></select></div>
+    ${st.lateMode!=='NONE'?`<div class="two"><div class="field"><label for="s-lamt">${st.lateMode==='PER_DAY'?'วันละ':'จำนวน'}</label><div class="unit"><input id="s-lamt" type="number" data-set="lateAmt" value="${st.lateAmt}"><span>บาท</span></div></div>
+    ${st.lateMode==='PER_DAY'?`<div class="field"><label for="s-lmax">สูงสุด</label><div class="unit"><input id="s-lmax" type="number" data-set="lateMax" value="${st.lateMax}"><span>บาท</span></div></div>`:''}</div>
+    <div class="field"><label for="s-grace">ผ่อนผัน</label><div class="unit"><input id="s-grace" type="number" data-set="grace" value="${st.grace}"><span>วัน</span></div></div>`:''}
+   </div>
+   <div class="panel panel-b"><h3 style="margin-bottom:6px">ค่าบริการอื่น</h3><p class="faint" style="margin:0 0 6px;font-size:12.5px">ติ๊กเพื่อใส่ในบิลทุกห้อง · ปรับราคารายห้องได้ในสัญญา</p>
+    ${st.fees.map((f,ix)=>`<div class="fee"><input type="checkbox" id="fee-on-${f.id}" data-set="fees.${ix}.on" ${f.on?'checked':''} aria-label="ใช้ ${f.name}"><label for="fee-on-${f.id}">${esc(f.name)}</label><input type="number" id="fee-amt-${f.id}" data-set="fees.${ix}.amount" value="${f.amount}" aria-label="ราคา ${f.name}"></div>`).join('')}
+    <button class="btn sm" style="margin-top:8px" data-act="addFee">+ เพิ่มรายการ</button>
+    <h3 style="margin:18px 0 10px">ช่องทางรับเงิน</h3>
+    <div class="field"><label for="s-pp">PromptPay (เบอร์โทร/เลขประจำตัว)</label><input id="s-pp" data-set="promptpay" value="${esc(st.promptpay)}"></div>
+    <div class="example" id="example">${exampleBill()}</div>
+   </div></div>`;
+}
+
+/* ============ owner: room dialog ============ */
+function openRoom(id){
+  const r=roomById(id), d=document.getElementById('dlg'); const inv=S.invoices.filter(i=>i.room===id); const tk=S.tickets.filter(t=>t.room===id);
+  d.innerHTML=`<div class="dlg-h"><div class="toolbar"><h2 style="font-size:20px">ห้อง ${r.no}</h2><span class="pill ${r.status==='OCCUPIED'?'p-info':r.status==='VACANT'?'p-mute':r.status==='RESERVED'?'p-warn':'p-bad'}">${STATUS_TH[r.status]}</span></div>
+   <div class="toolbar">${r.status==='VACANT'?'<button class="btn primary" data-dact="new">ทำสัญญาใหม่</button>':''}<button class="btn" data-dact="close">ปิด</button></div></div>
+   <div class="dlg-b" style="display:grid;gap:12px">
+    <div class="panel panel-b"><div class="two"><div><div class="label">ประเภท</div>${TYPES[r.type].name} · ชั้น ${r.floor}</div><div><div class="label">ค่าเช่า</div><span class="num">${money(r.rent,0)}</span> บาท/เดือน</div></div></div>
+    ${r.tenant?`<div class="panel panel-b"><div class="label">ผู้เช่า</div><b>${esc(r.tenant)}</b> · <span class="num">${r.phone||'-'}</span>
+     <div class="two" style="margin-top:10px"><div><div class="label">สัญญา</div>${thDate(r.start)} – ${r.end?thDate(r.end):'-'}</div><div><div class="label">LINE</div>${r===DEMO?'<span class="pill p-ok">ผูกบัญชีแล้ว</span>':'<span class="pill p-mute">ส่ง QR เชิญ</span>'}</div></div></div>`
+     :`<div class="panel panel-b muted">ยังไม่มีผู้เช่า · ทำสัญญาใหม่แล้วจดเลขมิเตอร์เริ่มต้น ระบบจะใช้เป็นเลขตั้งต้นรอบแรก</div>`}
+    <div class="panel panel-b"><div class="label" style="margin-bottom:4px">มิเตอร์ล่าสุด</div><div class="two"><div>น้ำ <b class="num">${money(r.w.curr??r.w.prev,0)}</b></div><div>ไฟ <b class="num">${money(r.e.curr??r.e.prev,0)}</b></div></div></div>
+    ${inv.length?`<div class="panel panel-b"><div class="label" style="margin-bottom:6px">บิล</div>${inv.map(i=>`<div class="toolbar" style="justify-content:space-between"><span class="mono">${i.no}</span><span class="num">${money(invTotal(i).total)}</span>${pill(INV_PILL[i.status])}</div>`).join('')}</div>`:''}
+    ${tk.length?`<div class="panel panel-b"><div class="label" style="margin-bottom:6px">งานซ่อม</div>${tk.map(t=>`<div>${esc(t.title)} · ${TK_COL[t.status]}</div>`).join('')}</div>`:''}
+   </div>`;
+  d.onclick=ev=>{const a=ev.target.closest('[data-dact]')?.dataset.dact; if(a==='close') d.close(); if(a==='new') toast('ขั้นตอน: ข้อมูลผู้เช่า → ค่าเช่า/มัดจำ → จดมิเตอร์เริ่มต้น → ออกสัญญา PDF → ส่ง QR ผูก LINE')};
+  d.showModal();
+}
+
+const ACT={
+  bld:a=>{S.bld=a.dataset.id;render()},
+  openRoom:a=>openRoom(a.dataset.id),
+  openInv:a=>openInv(a.dataset.id),
+  draft:()=>{const s=sepInvoices();toast(`สร้างบิลร่าง ${s.filter(x=>x.ready).length} ห้อง · รอจดมิเตอร์ ${s.filter(x=>!x.ready).length} ห้อง`);S.view='bills';S.invPeriod='2026-09';render()},
+  issueAll:()=>toast('ส่งบิลทาง LINE Messaging API (ยังเป็น mock) · ผู้เช่าเห็นบิลใน LIFF ทันที'),
+  addFee:()=>{S.settings.fees.push({id:'f'+Date.now(),name:'ค่าบริการใหม่',amount:100,on:false});render()},
+  // tenant
+  ttab:a=>{S.tenantTab=a.dataset.id;S.payStep=0;render()},
+  pay:()=>{S.payStep=1;render()},
+  slip:()=>{S.payStep=2;render();toast('ส่งสลิปแล้ว · เจ้าของจะได้รับแจ้งเตือน')},
+  cat:a=>{document.querySelectorAll('[data-act="cat"]').forEach(b=>b.setAttribute('aria-pressed',b===a));S._cat=a.dataset.id},
+  report:()=>{const t=document.getElementById('rp-title').value.trim(); if(!t){toast('กรุณาระบุอาการที่ต้องการแจ้งซ่อม');return}
+    const tk={id:'t'+S.tickets.length,no:nextNo('MT'),room:'A-305',cat:S._cat||'อื่น ๆ',title:t,desc:document.getElementById('rp-desc').value,prio:'NORMAL',status:'NEW',tech:null,created:TODAY,cost:null,charge:false,time:document.getElementById('rp-time').value};
+    S.tickets.unshift(tk); S._cat=null; S.tenantTab='repairs'; render(); toast(`แจ้งซ่อมแล้ว ${tk.no} · ดูได้ที่หน้าแจ้งซ่อมของเจ้าของ`)},
+  // tech
+  job:a=>{S.techJob=a.dataset.id;render()},
+  back:()=>{S.techJob=null;render()},
+  tstat:a=>{const t=S.tickets.find(x=>x.id===S.techJob);t.status=a.dataset.id;
+    if(t.status==='DONE'){t.cost=Number(document.getElementById('tj-cost')?.value||0);t.charge=!!document.getElementById('tj-charge')?.checked;S.techJob=null}
+    render();toast(t.status==='DONE'?`ปิดงาน ${t.no} · แจ้งผู้เช่าให้ประเมิน (mock)`:`อัปเดต ${t.no}: ${TK_COL[t.status]}`)}
+};
+
+/* ============ tenant (LIFF) ============ */
+const ICON={home:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',bill:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/>',wrench:'<path d="M14.7 6.3a4 4 0 0 0 5 5L13 18l-3 3-4-4 3-3 6.7-6.7a4 4 0 0 0-1-1z"/>',bell:'<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 20a2 2 0 0 0 4 0"/>'};
+const svg=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">${ICON[k]}</svg>`;
+function tenantNav(){return `<nav class="pnav">${[['home','หน้าหลัก','home'],['bills','บิล','bill'],['repairs','แจ้งซ่อม','wrench'],['msgs','ข้อความ','bell']].map(([k,t,i])=>`<button data-act="ttab" data-id="${k}" ${S.tenantTab===k?'aria-current="page"':''}>${svg(i)}${t}</button>`).join('')}</nav>`}
+function qr(){const q=rng(88);let s='';for(let y=0;y<25;y++)for(let x=0;x<25;x++){const f=(x<7&&y<7)||(x>17&&y<7)||(x<7&&y>17);const edge=f&&(x%6===0||y%6===0||x===24||y===24||x===18||y===18||(x>=2&&x<=4&&y>=2&&y<=4)||(x>=20&&x<=22&&y>=2&&y<=4)||(x>=2&&x<=4&&y>=20&&y<=22));s+=`<i style="opacity:${f?(edge?1:0):(q()<.5?1:0)}"></i>`}return s}
+function tenantScreen(){
+  const aug=S.invoices.find(i=>i.id==='aug-A-305'); const sepR=DEMO; const sepReady=sepR.w.curr!=null&&sepR.e.curr!=null;
+  const estimate=sumLines(buildLines(DEMO,418,424,5352,5494));
+  const myT=S.tickets.filter(t=>t.room==='A-305');
+  if(S.tenantTab==='home') return `<div><div class="faint" style="font-size:12.5px">สวัสดีค่ะ</div><h2 style="font-size:20px">คุณพิมพ์ชนก · ห้อง A-305</h2></div>
+    <div class="pcard"><div class="toolbar" style="justify-content:space-between"><span class="label">บิลเดือน ${TH_M[8]} 2569</span>${pill(sepReady?INV_PILL.ISSUED:INV_PILL.WAIT)}</div>
+     ${S.payStep===0?`<div class="bigamt" style="margin:8px 0 2px">${money(estimate)}</div><div class="faint" style="font-size:12.5px">ตัวอย่างยอด · บิลจริงส่งวันที่ ${S.settings.issueDay} ${TH_M[9]} ครบกำหนด ${S.settings.dueDay} ${TH_M[9]}</div>
+      <div class="lines" style="margin-top:12px">${buildLines(DEMO,418,424,5352,5494).map(l=>`<div><span class="muted">${esc(l.desc.split(' · ')[0])}${l.type==='WATER'||l.type==='ELECTRIC'?` <span class="faint num">(${l.qty} หน่วย)</span>`:''}</span><span class="num">${money(l.amt)}</span></div>`).join('')}</div>
+      <button class="btn primary" style="width:100%;margin-top:14px" data-act="pay">ชำระเงิน</button>`
+     :S.payStep===1?`<div style="text-align:center"><div class="bigamt" style="margin-top:8px">${money(estimate)}</div><div class="qr" aria-label="QR PromptPay ตัวอย่าง">${qr()}</div>
+      <div class="muted" style="font-size:12.5px">PromptPay <b class="mono">${S.settings.promptpay}</b> · บ้านสบาย เรสซิเดนซ์</div>
+      <div class="mockchip" style="display:inline-block;margin:8px 0">QR ตัวอย่าง · ยังไม่รับเงินจริง</div>
+      <button class="btn primary" style="width:100%" data-act="slip">แนบสลิปการโอน</button></div>`
+     :`<div style="text-align:center;padding:12px 0"><span class="pill p-warn">รอเจ้าของตรวจสลิป</span><p class="muted" style="font-size:13px">ได้รับสลิปแล้ว จะแจ้งทาง LINE เมื่อออกใบเสร็จ</p></div>`}
+    </div>
+    <div class="pcard"><div class="toolbar" style="justify-content:space-between"><b>งานซ่อมของฉัน</b><button class="btn sm" data-act="ttab" data-id="repairs">แจ้งซ่อม</button></div>
+     ${myT.slice(0,2).map(t=>`<div class="toolbar" style="justify-content:space-between;margin-top:10px"><span>${esc(t.title)}</span>${pill(t.status==='DONE'?['p-ok','เสร็จแล้ว']:t.status==='NEW'?['p-mute','รอรับงาน']:['p-info',TK_COL[t.status]])}</div>`).join('')}</div>
+    <div class="pcard"><div class="label">สัญญาเช่า</div><div class="toolbar" style="justify-content:space-between;margin-top:4px"><span>${thDate(DEMO.start)} – ${thDate(DEMO.end)}</span><button class="btn sm" data-act="ttab" data-id="bills">ดูเอกสาร</button></div></div>`;
+  if(S.tenantTab==='bills') return `<h2 style="font-size:20px">บิลของฉัน</h2>
+    <div class="pcard"><div class="toolbar" style="justify-content:space-between"><b>${TH_M[8]} 2569</b>${pill(INV_PILL.WAIT)}</div><div class="faint" style="font-size:12.5px;margin-top:4px">กำลังจดมิเตอร์ · ส่งบิลวันที่ ${S.settings.issueDay} ${TH_M[9]}</div></div>
+    <div class="pcard"><div class="toolbar" style="justify-content:space-between"><b>${TH_M[7]} 2569</b>${pill(INV_PILL[aug.status])}</div>
+     <div class="toolbar" style="justify-content:space-between;margin-top:8px"><span class="num bigamt" style="font-size:22px">${money(invTotal(aug).total)}</span><span class="mono faint" style="font-size:12px">${aug.rc||aug.no}</span></div>
+     <div class="toolbar" style="margin-top:10px"><button class="btn sm" data-act="tinv" onclick="openInv('aug-A-305','INV')">ใบแจ้งหนี้</button>${aug.status==='PAID'?`<button class="btn sm" onclick="openInv('aug-A-305','RC')">ใบเสร็จ</button>`:''}</div></div>
+    <div class="pcard"><div class="label">เงินประกัน</div><div class="num" style="font-size:18px;font-weight:600">9,000.00 บาท</div><div class="faint" style="font-size:12.5px">คืนหลังย้ายออกและตรวจห้อง</div></div>`;
+  if(S.tenantTab==='repairs') return `<h2 style="font-size:20px">แจ้งซ่อม</h2>
+    <div class="pcard" style="display:grid;gap:10px">
+     <div><div class="label" style="margin-bottom:6px">หมวด</div><div class="chips">${['ไฟฟ้า','ประปา','แอร์','เฟอร์นิเจอร์','อื่น ๆ'].map(c=>`<button data-act="cat" data-id="${c}" aria-pressed="${S._cat===c}">${c}</button>`).join('')}</div></div>
+     <div><label class="label" for="rp-title">อาการ</label><input class="psel" id="rp-title" placeholder="เช่น ไฟห้องน้ำไม่ติด"></div>
+     <div><label class="label" for="rp-desc">รายละเอียดเพิ่มเติม</label><textarea class="ta" id="rp-desc" placeholder="ตำแหน่ง อาการ เริ่มเป็นเมื่อไร"></textarea></div>
+     <div><label class="label" for="rp-time">ช่วงเวลาที่สะดวกให้ช่างเข้า</label><select class="psel" id="rp-time"><option>ช่วงเช้า 9:00–12:00</option><option>ช่วงบ่าย 13:00–17:00</option><option selected>ช่วงเย็นหลัง 17:00</option><option>เข้าได้เลย (มีกุญแจสำรอง)</option></select></div>
+     <button class="btn" type="button" onclick="toast('ระบบจริง: เปิดกล้อง/เลือกรูป แล้วอัปโหลดไปที่ storage')">+ แนบรูป</button>
+     <button class="btn primary" data-act="report">ส่งแจ้งซ่อม</button></div>
+    ${myT.map(t=>`<div class="pcard"><div class="toolbar" style="justify-content:space-between"><b>${esc(t.title)}</b>${pill(t.status==='DONE'?['p-ok','เสร็จแล้ว']:t.status==='NEW'?['p-mute','รอรับงาน']:['p-info',TK_COL[t.status]])}</div><div class="faint" style="font-size:12px">${t.no} · ${thDate(t.created)}${t.tech?` · ${t.tech}`:''}</div></div>`).join('')}`;
+  return `<h2 style="font-size:20px">ข้อความ</h2><div class="mockchip" style="justify-self:start">ตัวอย่างข้อความ LINE · ยังไม่ส่งจริง</div>
+   <div class="chat">
+    <div class="bubble"><div class="h">บิลเดือน ส.ค. 2569 พร้อมแล้ว</div>ห้อง A-305 ยอด ${money(invTotal(aug).total)} บาท ครบกำหนด 5 ${TH_M[8]} · กดดูบิลและชำระเงิน</div>
+    <div class="bubble"><div class="h">ได้รับชำระเงินแล้ว</div>ใบเสร็จเลขที่ ${aug.rc} · ขอบคุณค่ะ</div>
+    <div class="bubble"><div class="h">อัปเดตงานซ่อม MT-202609-0001</div>ช่างสมชายรับงาน "แอร์ไม่เย็น มีน้ำหยด" · นัดเข้าช่วงเย็นหลัง 17:00</div>
+    <div class="bubble"><div class="h">แจ้งเตือนล่วงหน้า</div>บิลเดือน ก.ย. จะส่งวันที่ ${S.settings.issueDay} ${TH_M[9]} ครบกำหนด ${S.settings.dueDay} ${TH_M[9]}</div>
+   </div>`;
+}
+function tenantNotes(){return `<div class="aside-notes"><h3>LINE LIFF · ผู้เช่า</h3>
+  <ul><li>ผู้เช่าสแกน QR เชิญจากเจ้าของ → LINE Login → ผูก <span class="mono">lineUserId</span> กับผู้เช่าอัตโนมัติ ไม่ต้องสมัครสมาชิก</li>
+   <li>เห็นเฉพาะห้อง บิล และงานซ่อมของตัวเอง</li>
+   <li>ลองแจ้งซ่อมจากหน้านี้ แล้วสลับไปที่ <b>เจ้าของ → แจ้งซ่อม</b> จะเห็นงานใหม่ในคอลัมน์ "แจ้งใหม่"</li></ul>
+  <h3>ส่วนที่ยังเป็น mockup</h3><ul><li>QR PromptPay และการตรวจสลิปอัตโนมัติ</li><li>ข้อความแจ้งเตือนผ่าน LINE Messaging API</li></ul></div>`}
+
+/* ============ technician ============ */
+const ME='ช่างสมชาย';
+function techScreen(){
+  const mine=S.tickets.filter(t=>t.tech===ME);
+  if(S.techJob){const t=S.tickets.find(x=>x.id===S.techJob), r=roomById(t.room);
+    return `<button class="btn sm" style="justify-self:start" data-act="back">‹ กลับ</button>
+     <div class="pcard"><div class="toolbar" style="justify-content:space-between"><span class="rn" style="font-family:var(--f-display);font-size:22px;font-weight:700">${t.room}</span>${pill(PRIO[t.prio])}</div>
+      <h3 style="margin-top:6px">${esc(t.title)}</h3><div class="faint" style="font-size:12.5px">${t.cat} · ${t.no}</div>
+      ${t.desc?`<p style="margin:10px 0 0">${esc(t.desc)}</p>`:''}
+      <div class="lines" style="margin-top:12px"><div><span class="muted">ผู้เช่า</span><span>${esc(r.tenant||'-')}</span></div><div><span class="muted">โทร</span><span class="num">${r.phone||'-'}</span></div><div><span class="muted">สะดวก</span><span>${esc(t.time||'-')}</span></div><div><span class="muted">สถานะ</span><span>${TK_COL[t.status]}</span></div></div></div>
+     ${t.status==='ASSIGNED'?`<button class="btn primary" data-act="tstat" data-id="IN_PROGRESS">เริ่มซ่อม</button>`:''}
+     ${t.status==='IN_PROGRESS'?`<div class="pcard" style="display:grid;gap:10px"><button class="btn" onclick="toast('ระบบจริง: ถ่ายรูปก่อน/หลังซ่อม')">+ รูปหลังซ่อม</button>
+       <div><label class="label" for="tj-cost">ค่าอะไหล่/ค่าใช้จ่าย (บาท)</label><input class="psel" id="tj-cost" type="number" value="0"></div>
+       <label class="check"><input type="checkbox" id="tj-charge"> เรียกเก็บกับผู้เช่า (ใส่ในบิลเดือนถัดไป)</label>
+       <button class="btn primary" data-act="tstat" data-id="DONE">ซ่อมเสร็จ ปิดงาน</button></div>`:''}`}
+  return `<div><div class="faint" style="font-size:12.5px">${thDate(TODAY)}</div><h2 style="font-size:20px">งานของ${ME}</h2></div>
+   ${['IN_PROGRESS','ASSIGNED','DONE'].map(s=>{const ts=mine.filter(t=>t.status===s);if(!ts.length)return'';return `<div class="label">${TK_COL[s]} · ${ts.length}</div>`+ts.map(t=>
+    `<button class="pcard prio-${t.prio}" style="text-align:left;cursor:pointer;display:grid;gap:4px" data-act="job" data-id="${t.id}" ${s==='DONE'?'disabled':''}>
+      <div class="toolbar" style="justify-content:space-between"><b style="font-family:var(--f-display);font-size:17px">${t.room}</b>${pill(PRIO[t.prio])}</div><span>${esc(t.title)}</span><span class="faint" style="font-size:12px">${t.cat} · ${esc(t.time||'')}</span></button>`).join('')}).join('')}`;
+}
+function techNotes(){return `<div class="aside-notes"><h3>ช่าง · เว็บบนมือถือ</h3>
+  <ul><li>ช่างล็อกอินด้วยเบอร์โทร เห็นเฉพาะงานที่ถูกมอบหมาย และตึกที่รับผิดชอบ</li><li>ขั้นตอน: มอบหมายแล้ว → เริ่มซ่อม → ซ่อมเสร็จ (ใส่ค่าใช้จ่าย รูปหลังซ่อม)</li>
+  <li>เลือก "เรียกเก็บกับผู้เช่า" แล้ว ค่าซ่อมจะเข้าไปในบิลเดือนถัดไปเป็นรายการ <span class="mono">REPAIR</span></li>
+  <li>มอบงานเพิ่มได้จาก <b>เจ้าของ → แจ้งซ่อม</b> แล้วกลับมาดูที่นี่</li></ul></div>`}
+function phoneStage(screen,notes,title,nav){return `<div class="phone-stage"><div class="phone"><div class="liff-bar"><span class="x">×</span><b>${title}</b><span class="x">⋯</span></div><div class="pscreen">${screen}</div>${nav}</div>${notes}</div>`}
+
+/* ============ blueprint ============ */
+function blueprint(){return `<div class="pagehead"><div><h2>โครงสร้างระบบ</h2><p class="muted">ความสัมพันธ์ของข้อมูล การออกบิลแต่ละเดือน และเครื่องมือที่ใช้</p></div></div>
+ <div class="bp">
+  <div class="panel"><div class="panel-h"><h3>ออกบิลแต่ละเดือน</h3></div><div class="panel-b"><ol class="flow">
+   <li><b>ทำสัญญา + จดมิเตอร์ครั้งแรก</b><br><span class="muted">บันทึก <span class="mono">MeterReading.isInitial</span> เป็นเลขตั้งต้น</span></li>
+   <li><b>Cron สร้างรอบบิล</b> ทุกวันที่ ${S.settings.billingDay}<br><span class="muted"><span class="mono">BillingPeriod</span> ของเดือนนั้น ดึงเลขครั้งก่อนมาเตรียมไว้ทุกห้อง</span></li>
+   <li><b>จดเลขใหม่</b> (เจ้าของหรือพนักงานใช้มือถือ)<br><span class="muted">ระบบคำนวณจาก <span class="mono">UtilityRate</span> + <span class="mono">FeeItem</span> ที่มีผลในเดือนนั้น แล้วสร้าง <span class="mono">Invoice</span> สถานะ DRAFT</span></li>
+   <li><b>ตรวจ/แก้บิลร่าง</b> → ส่งวันที่ ${S.settings.issueDay}<br><span class="muted">หรือตั้งให้ส่งเองอัตโนมัติ · ทุกการแก้ไขบันทึกใน <span class="mono">AuditLog</span></span></li>
+   <li><b>ผู้เช่าชำระ</b> → แนบสลิป → เจ้าของยืนยัน<br><span class="muted"><span class="mono">Payment</span> CONFIRMED → ออก <span class="mono">Receipt</span> เลขรันต่อ พร้อมจำนวนเงินตัวอักษร</span></li>
+   <li><b>หลังวันที่ ${S.settings.dueDay}</b> cron คิดค่าปรับและส่งเตือน<br><span class="muted">ตามรูปแบบค่าปรับในหน้าตั้งค่า</span></li></ol></div></div>
+  <div class="panel"><div class="panel-h"><h3>เครื่องมือ</h3></div><div class="tbl-wrap"><table class="stack"><tbody>
+   <tr><td>แอป</td><td>Next.js (App Router) + TypeScript</td></tr><tr><td>UI</td><td>Tailwind + shadcn/ui</td></tr>
+   <tr><td>ฐานข้อมูล</td><td>PostgreSQL + Prisma</td></tr><tr><td>ล็อกอิน</td><td>Better Auth (เจ้าของ/ช่าง) · LINE Login (ผู้เช่า)</td></tr>
+   <tr><td>LINE</td><td>LIFF SDK · Messaging API (เฟส 2)</td></tr><tr><td>PDF</td><td>Puppeteer · bahttext สำหรับตัวอักษร</td></tr>
+   <tr><td>ไฟล์/รูป</td><td>Cloudflare R2 หรือ Supabase Storage</td></tr><tr><td>งานตามเวลา</td><td>Cron (Vercel Cron / pg_cron)</td></tr>
+   <tr><td>รับเงิน</td><td>promptpay-qr · ตรวจสลิป (เฟส 2)</td></tr><tr><td>Deploy</td><td>Vercel + Supabase หรือ VPS + Docker</td></tr></tbody></table></div></div>
+ </div>
+ <div style="margin-top:16px" class="mermaid-box"><h3 style="margin-bottom:10px">ER Diagram (ตารางหลัก)</h3><pre class="mermaid">
+erDiagram
+  PROPERTY ||--o{ BUILDING : has
+  PROPERTY ||--|| BILLING_SETTING : config
+  PROPERTY ||--o{ UTILITY_RATE : config
+  PROPERTY ||--o{ FEE_ITEM : config
+  BUILDING ||--o{ ROOM : has
+  ROOM_TYPE ||--o{ ROOM : prices
+  ROOM ||--o{ METER : has
+  METER ||--o{ METER_READING : records
+  ROOM ||--o{ CONTRACT : leased
+  CONTRACT ||--|{ CONTRACT_TENANT : includes
+  TENANT ||--o{ CONTRACT_TENANT : signs
+  USER |o--o| TENANT : line_login
+  CONTRACT ||--o{ CONTRACT_FEE : adds
+  FEE_ITEM ||--o{ CONTRACT_FEE : defines
+  BILLING_PERIOD ||--o{ INVOICE : groups
+  CONTRACT ||--o{ INVOICE : billed
+  INVOICE ||--|{ INVOICE_ITEM : lines
+  METER_READING |o--o{ INVOICE_ITEM : usage
+  INVOICE ||--o{ PAYMENT : paid_by
+  PAYMENT ||--o| RECEIPT : issues
+  ROOM ||--o{ MAINTENANCE_REQUEST : reports
+  USER |o--o{ MAINTENANCE_REQUEST : assigned
+  MAINTENANCE_REQUEST ||--o{ MAINTENANCE_PHOTO : has
+  MAINTENANCE_REQUEST |o--o{ INVOICE_ITEM : repair_charge
+</pre></div>`}
+
+render();
+</script>

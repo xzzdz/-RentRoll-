@@ -1,0 +1,636 @@
+// =============================================================
+//  ระบบจัดการหอพัก — Database schema (PostgreSQL + Prisma)
+//  โครงสร้าง: หอ (Property) → ตึก (Building) → ห้อง (Room)
+//  บทบาท: OWNER (เจ้าของ) / TECHNICIAN (ช่าง) / TENANT (ผู้เช่า)
+// =============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------
+//  ENUMS
+// ---------------------------------------------------------------
+
+enum Role {
+  OWNER
+  TECHNICIAN
+  TENANT
+}
+
+enum RoomStatus {
+  VACANT       // ว่าง
+  RESERVED     // จองแล้ว
+  OCCUPIED     // มีผู้เช่า
+  MAINTENANCE  // ปิดปรับปรุง
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  ENDED       // ครบสัญญา / ย้ายออกปกติ
+  TERMINATED  // ยกเลิกก่อนกำหนด
+}
+
+enum UtilityType {
+  WATER
+  ELECTRIC
+}
+
+enum RateMode {
+  PER_UNIT  // ราคาต่อหน่วย (+ ขั้นต่ำได้)
+  TIERED    // อัตราขั้นบันได
+  FLAT      // เหมาจ่ายรายเดือน (ไม่ต้องจดมิเตอร์)
+}
+
+enum FeeCharge {
+  MONTHLY   // เก็บทุกเดือน เช่น ค่าส่วนกลาง ค่าเน็ต ค่าที่จอดรถ
+  ONE_TIME  // เก็บครั้งเดียว เช่น ค่าทำความสะอาดตอนย้ายออก
+}
+
+enum LateFeeMode {
+  NONE
+  FIXED    // ปรับครั้งเดียว
+  PER_DAY  // ปรับรายวัน (มีเพดานได้)
+}
+
+enum PeriodStatus {
+  OPEN     // สร้างรอบแล้ว รอจดมิเตอร์
+  DRAFTED  // สร้างบิลร่างแล้ว แก้ไขได้
+  ISSUED   // ส่งบิลแล้ว
+  CLOSED   // ปิดรอบ
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIAL
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum InvoiceItemType {
+  RENT
+  WATER
+  ELECTRIC
+  FEE
+  LATE_FEE
+  REPAIR    // ค่าซ่อมที่เรียกเก็บผู้เช่า
+  DISCOUNT
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  PROMPTPAY
+}
+
+enum PaymentStatus {
+  PENDING_REVIEW  // ผู้เช่าแนบสลิป รอเจ้าของตรวจ
+  CONFIRMED
+  REJECTED
+}
+
+enum DocType {
+  INVOICE
+  RECEIPT
+  CONTRACT
+  MAINTENANCE
+}
+
+enum MaintenanceStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  NORMAL
+  URGENT
+}
+
+enum PhotoKind {
+  REPORT  // รูปตอนแจ้ง
+  BEFORE
+  AFTER
+}
+
+enum NotifyChannel {
+  LINE
+  IN_APP
+}
+
+enum NotifyStatus {
+  QUEUED
+  SENT
+  FAILED
+  MOCKED  // ช่วงแรกยังไม่ต่อ LINE จริง
+}
+
+// ---------------------------------------------------------------
+//  USERS & AUTH
+// ---------------------------------------------------------------
+
+model User {
+  id           String   @id @default(cuid())
+  role         Role
+  name         String
+  phone        String?  @unique
+  email        String?  @unique
+  passwordHash String?  // OWNER / TECHNICIAN ล็อกอินผ่านเว็บ
+  lineUserId   String?  @unique // TENANT ผูกผ่าน LINE Login (LIFF)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenantProfile       Tenant?
+  technicianBuildings TechnicianBuilding[]
+  assignedJobs        MaintenanceRequest[] @relation("AssignedTechnician")
+  meterReadings       MeterReading[]       @relation("ReadBy")
+  paymentsRecorded    Payment[]            @relation("RecordedBy")
+  maintenanceLogs     MaintenanceLog[]
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+}
+
+// ---------------------------------------------------------------
+//  PROPERTY STRUCTURE
+// ---------------------------------------------------------------
+
+model Property {
+  id        String   @id @default(cuid())
+  name      String   // ชื่อหอ (ใช้เป็นหัวใบเสร็จ)
+  address   String
+  phone     String?
+  taxId     String?  // เลขผู้เสียภาษี (ถ้ามี) แสดงบนใบเสร็จ
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  buildings       Building[]
+  roomTypes       RoomType[]
+  billingSetting  BillingSetting?
+  utilityRates    UtilityRate[]
+  feeItems        FeeItem[]
+  billingPeriods  BillingPeriod[]
+  docSequences    DocumentSequence[]
+}
+
+model Building {
+  id         String   @id @default(cuid())
+  propertyId String
+  name       String   // ตึก A, ตึก B
+  floors     Int
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  property     Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  rooms        Room[]
+  technicians  TechnicianBuilding[]
+  utilityRates UtilityRate[]        // override อัตราเฉพาะตึก (ถ้ามี)
+
+  @@unique([propertyId, name])
+}
+
+// ช่างรับผิดชอบตึกไหนบ้าง (ใช้กรองงานแจ้งซ่อม)
+model TechnicianBuilding {
+  userId     String
+  buildingId String
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  building Building @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, buildingId])
+}
+
+model RoomType {
+  id          String  @id @default(cuid())
+  propertyId  String
+  name        String  // ห้องพัดลม, ห้องแอร์, ห้องสตูดิโอ
+  baseRent    Decimal @db.Decimal(12, 2)
+  deposit     Decimal @db.Decimal(12, 2)
+  description String?
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  rooms    Room[]
+
+  @@unique([propertyId, name])
+}
+
+model Room {
+  id           String     @id @default(cuid())
+  buildingId   String
+  roomTypeId   String
+  number       String     // "A-301"
+  floor        Int
+  status       RoomStatus @default(VACANT)
+  rentOverride Decimal?   @db.Decimal(12, 2) // ราคาพิเศษเฉพาะห้อง
+  note         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  building    Building             @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  roomType    RoomType             @relation(fields: [roomTypeId], references: [id])
+  meters      Meter[]
+  contracts   Contract[]
+  maintenance MaintenanceRequest[]
+
+  @@unique([buildingId, number])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------
+//  TENANTS & CONTRACTS
+// ---------------------------------------------------------------
+
+model Tenant {
+  id               String   @id @default(cuid())
+  userId           String?  @unique // ผูกเมื่อผู้เช่ากดเข้า LIFF ครั้งแรก
+  fullName         String
+  phone            String
+  idCardNo         String?  // เข้ารหัสระดับแอป (AES) ก่อนบันทึก
+  address          String?  // ที่อยู่ตามบัตร ใช้ในสัญญา/ใบเสร็จ
+  emergencyName    String?
+  emergencyPhone   String?
+  inviteCode       String?  @unique // โค้ด/QR ให้ผู้เช่าผูก LINE
+  createdAt        DateTime @default(now())
+
+  user        User?                @relation(fields: [userId], references: [id])
+  contracts   ContractTenant[]
+  maintenance MaintenanceRequest[]
+}
+
+model Contract {
+  id             String         @id @default(cuid())
+  contractNo     String         @unique
+  roomId         String
+  status         ContractStatus @default(DRAFT)
+  startDate      DateTime       @db.Date
+  endDate        DateTime?      @db.Date
+  monthlyRent    Decimal        @db.Decimal(12, 2) // snapshot ราคา ณ วันทำสัญญา
+  depositAmount  Decimal        @db.Decimal(12, 2)
+  depositRefund  Decimal?       @db.Decimal(12, 2) // คืนเงินประกันตอนย้ายออก
+  moveOutDate    DateTime?      @db.Date
+  pdfUrl         String?
+  note           String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  room     Room             @relation(fields: [roomId], references: [id])
+  tenants  ContractTenant[]
+  fees     ContractFee[]
+  invoices Invoice[]
+
+  @@index([roomId, status])
+}
+
+// ห้องเดียวอยู่ได้หลายคน — ระบุผู้เช่าหลัก 1 คนเป็นผู้รับบิล
+model ContractTenant {
+  contractId String
+  tenantId   String
+  isPrimary  Boolean @default(false)
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@id([contractId, tenantId])
+}
+
+// ---------------------------------------------------------------
+//  SETTINGS (ตั้งค่าเองได้ทั้งหมด)
+// ---------------------------------------------------------------
+
+model BillingSetting {
+  propertyId      String      @id
+  billingDay      Int         @default(25) // วันที่ระบบสร้างบิลร่าง
+  autoIssue       Boolean     @default(false) // true = ออกบิลอัตโนมัติเมื่อจดมิเตอร์ครบ
+  issueDay        Int         @default(1)  // วันที่ส่งบิลให้ผู้เช่า
+  dueDay          Int         @default(5)  // วันครบกำหนดชำระ
+  lateFeeMode     LateFeeMode @default(NONE)
+  lateFeeAmount   Decimal     @default(0) @db.Decimal(12, 2)
+  lateFeeMax      Decimal?    @db.Decimal(12, 2) // เพดานค่าปรับ (PER_DAY)
+  graceDays       Int         @default(0)
+  prorateFirstMonth Boolean   @default(true) // คิดค่าเช่าเดือนแรกตามจำนวนวัน
+  promptPayId     String?     // เบอร์/เลขบัตร สำหรับสร้าง QR
+  bankName        String?
+  bankAccountNo   String?
+  bankAccountName String?
+  receiptFooter   String?     // ข้อความท้ายใบเสร็จ
+  updatedAt       DateTime    @updatedAt
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+}
+
+// อัตราค่าน้ำ/ค่าไฟ — เก็บเป็นประวัติด้วย effectiveFrom
+// buildingId = null → ใช้ทั้งหอ, มีค่า → override เฉพาะตึก
+model UtilityRate {
+  id            String      @id @default(cuid())
+  propertyId    String
+  buildingId    String?
+  utility       UtilityType
+  mode          RateMode
+  unitPrice     Decimal?    @db.Decimal(10, 2) // PER_UNIT
+  minimumUnits  Decimal?    @db.Decimal(10, 2) // ขั้นต่ำเป็นหน่วย
+  minimumCharge Decimal?    @db.Decimal(12, 2) // ขั้นต่ำเป็นบาท
+  flatAmount    Decimal?    @db.Decimal(12, 2) // FLAT
+  effectiveFrom DateTime    @db.Date
+  createdAt     DateTime    @default(now())
+
+  property Property          @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  building Building?         @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  tiers    UtilityRateTier[]
+
+  @@index([propertyId, utility, effectiveFrom])
+}
+
+model UtilityRateTier {
+  id        String   @id @default(cuid())
+  rateId    String
+  fromUnit  Decimal  @db.Decimal(10, 2)
+  toUnit    Decimal? @db.Decimal(10, 2) // null = ไม่จำกัด
+  unitPrice Decimal  @db.Decimal(10, 2)
+
+  rate UtilityRate @relation(fields: [rateId], references: [id], onDelete: Cascade)
+}
+
+// รายการค่าบริการอื่น ๆ ที่ตั้งเองได้
+model FeeItem {
+  id         String    @id @default(cuid())
+  propertyId String
+  name       String    // ค่าส่วนกลาง, ค่าอินเทอร์เน็ต, ค่าที่จอดรถ
+  amount     Decimal   @db.Decimal(12, 2)
+  charge     FeeCharge @default(MONTHLY)
+  isDefault  Boolean   @default(false) // ใส่อัตโนมัติทุกสัญญาใหม่
+  isActive   Boolean   @default(true)
+
+  property  Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  contracts ContractFee[]
+}
+
+model ContractFee {
+  contractId String
+  feeItemId  String
+  amount     Decimal? @db.Decimal(12, 2) // override ราคาเฉพาะสัญญา
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  feeItem  FeeItem  @relation(fields: [feeItemId], references: [id])
+
+  @@id([contractId, feeItemId])
+}
+
+// ---------------------------------------------------------------
+//  METERS
+// ---------------------------------------------------------------
+
+model Meter {
+  id         String      @id @default(cuid())
+  roomId     String
+  utility    UtilityType
+  serialNo   String?
+  maxReading Decimal?    @db.Decimal(12, 2) // ใช้คำนวณตอนมิเตอร์วนกลับ 0
+  isActive   Boolean     @default(true)     // เปลี่ยนมิเตอร์ใหม่ = ปิดตัวเก่า
+  installedAt DateTime   @default(now())
+
+  room     Room           @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  readings MeterReading[]
+
+  @@index([roomId, utility])
+}
+
+// จดครั้งแรก (isInitial) แล้วทุกเดือนดึงค่าก่อนหน้ามาเป็นเลขเริ่มอัตโนมัติ
+model MeterReading {
+  id          String   @id @default(cuid())
+  meterId     String
+  periodMonth DateTime @db.Date // วันที่ 1 ของเดือนรอบบิล
+  value       Decimal  @db.Decimal(12, 2)
+  isInitial   Boolean  @default(false)
+  photoUrl    String?
+  readAt      DateTime @default(now())
+  readById    String?
+  note        String?
+  editedAt    DateTime? // แก้ไขภายหลัง — ดูประวัติใน AuditLog
+
+  meter        Meter         @relation(fields: [meterId], references: [id], onDelete: Cascade)
+  readBy       User?         @relation("ReadBy", fields: [readById], references: [id])
+  invoiceItems InvoiceItem[]
+
+  // เลขตั้งต้น (isInitial) กับเลขรายเดือนอยู่ในเดือนเดียวกันได้ เช่น ย้ายเข้ากลางเดือน
+  @@unique([meterId, periodMonth, isInitial])
+}
+
+// ---------------------------------------------------------------
+//  BILLING
+// ---------------------------------------------------------------
+
+// 1 รอบ = 1 เดือนต่อหอ; cron สร้างตาม BillingSetting.billingDay
+model BillingPeriod {
+  id          String       @id @default(cuid())
+  propertyId  String
+  periodMonth DateTime     @db.Date
+  status      PeriodStatus @default(OPEN)
+  draftedAt   DateTime?
+  issuedAt    DateTime?
+  closedAt    DateTime?
+
+  property Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+
+  @@unique([propertyId, periodMonth])
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  invoiceNo  String        @unique // INV-202609-0001
+  periodId   String?       // null = บิลนอกรอบ เช่น เงินประกัน/ค่าย้ายออก
+  contractId String
+  issueDate  DateTime?     @db.Date
+  dueDate    DateTime?     @db.Date
+  subtotal   Decimal       @db.Decimal(12, 2)
+  discount   Decimal       @default(0) @db.Decimal(12, 2)
+  lateFee    Decimal       @default(0) @db.Decimal(12, 2)
+  total      Decimal       @db.Decimal(12, 2)
+  paidAmount Decimal       @default(0) @db.Decimal(12, 2)
+  status     InvoiceStatus @default(DRAFT)
+  pdfUrl     String?
+  note       String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  period   BillingPeriod? @relation(fields: [periodId], references: [id])
+  contract Contract       @relation(fields: [contractId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([periodId, contractId])
+  @@index([status, dueDate])
+}
+
+model InvoiceItem {
+  id             String          @id @default(cuid())
+  invoiceId      String
+  type           InvoiceItemType
+  description    String
+  prevReading    Decimal?        @db.Decimal(12, 2)
+  currReading    Decimal?        @db.Decimal(12, 2)
+  quantity       Decimal         @default(1) @db.Decimal(12, 2)
+  unitPrice      Decimal         @db.Decimal(12, 2)
+  amount         Decimal         @db.Decimal(12, 2)
+  meterReadingId String?
+  maintenanceId  String?
+  sortOrder      Int             @default(0)
+
+  invoice      Invoice             @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  meterReading MeterReading?       @relation(fields: [meterReadingId], references: [id])
+  maintenance  MaintenanceRequest? @relation(fields: [maintenanceId], references: [id])
+}
+
+model Payment {
+  id           String        @id @default(cuid())
+  invoiceId    String
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod
+  status       PaymentStatus @default(PENDING_REVIEW)
+  paidAt       DateTime
+  slipUrl      String?
+  slipRef      String?       @unique // เลขอ้างอิงสลิป กันส่งซ้ำ (ตอนต่อระบบตรวจสลิป)
+  recordedById String?
+  note         String?
+  createdAt    DateTime      @default(now())
+
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
+  recordedBy User?    @relation("RecordedBy", fields: [recordedById], references: [id])
+  receipt    Receipt?
+}
+
+// ใบเสร็จรับเงิน (ไม่ใช่ใบกำกับภาษี) — ออกเมื่อ Payment = CONFIRMED
+model Receipt {
+  id        String   @id @default(cuid())
+  receiptNo String   @unique // RC-202609-0001
+  paymentId String   @unique
+  issuedAt  DateTime @default(now())
+  amount    Decimal  @db.Decimal(12, 2)
+  amountText String  // จำนวนเงินตัวอักษร "หนึ่งพันบาทถ้วน" (bahttext)
+  pdfUrl    String?
+  voidedAt  DateTime?
+  voidReason String?
+
+  payment Payment @relation(fields: [paymentId], references: [id])
+}
+
+// เลขที่เอกสารรันต่อเนื่อง แยกตามประเภท/เดือน (lock row ตอนออกเลข)
+model DocumentSequence {
+  propertyId String
+  docType    DocType
+  period     String  // "202609"
+  lastNo     Int     @default(0)
+  prefix     String  // "INV", "RC"
+
+  property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@id([propertyId, docType, period])
+}
+
+// ---------------------------------------------------------------
+//  MAINTENANCE (แจ้งซ่อม)
+// ---------------------------------------------------------------
+
+model MaintenanceRequest {
+  id             String            @id @default(cuid())
+  ticketNo       String            @unique // MT-202609-0001
+  roomId         String
+  tenantId       String?           // null = เจ้าของ/ช่างเปิดเอง
+  category       String            // ไฟฟ้า, ประปา, แอร์, เฟอร์นิเจอร์, อื่น ๆ
+  title          String
+  description    String?
+  priority       Priority          @default(NORMAL)
+  status         MaintenanceStatus @default(NEW)
+  assignedToId   String?
+  preferredTime  String?           // ช่วงเวลาที่สะดวกให้ช่างเข้า
+  scheduledAt    DateTime?
+  completedAt    DateTime?
+  cost           Decimal?          @db.Decimal(12, 2)
+  chargeTenant   Boolean           @default(false) // ถ้า true จะไปอยู่ในบิลเดือนถัดไป
+  rating         Int?              // ผู้เช่าให้คะแนนหลังซ่อม 1-5
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  room         Room               @relation(fields: [roomId], references: [id])
+  tenant       Tenant?            @relation(fields: [tenantId], references: [id])
+  assignedTo   User?              @relation("AssignedTechnician", fields: [assignedToId], references: [id])
+  photos       MaintenancePhoto[]
+  logs         MaintenanceLog[]
+  invoiceItems InvoiceItem[]
+
+  @@index([status, assignedToId])
+}
+
+model MaintenancePhoto {
+  id        String    @id @default(cuid())
+  requestId String
+  url       String
+  kind      PhotoKind @default(REPORT)
+  createdAt DateTime  @default(now())
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+}
+
+model MaintenanceLog {
+  id         String             @id @default(cuid())
+  requestId  String
+  userId     String
+  fromStatus MaintenanceStatus?
+  toStatus   MaintenanceStatus
+  comment    String?
+  createdAt  DateTime           @default(now())
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  user    User               @relation(fields: [userId], references: [id])
+}
+
+// ---------------------------------------------------------------
+//  NOTIFICATIONS & AUDIT
+// ---------------------------------------------------------------
+
+model Notification {
+  id        String        @id @default(cuid())
+  userId    String
+  channel   NotifyChannel
+  type      String        // INVOICE_ISSUED, PAYMENT_REMINDER, MAINTENANCE_UPDATE ...
+  title     String
+  body      String
+  payload   Json?
+  status    NotifyStatus  @default(QUEUED)
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+// เก็บทุกการแก้ไขข้อมูลการเงิน/มิเตอร์ ย้อนดูได้ว่าใครแก้อะไร
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  entity    String   // "MeterReading", "Invoice", ...
+  entityId  String
+  action    String   // CREATE / UPDATE / DELETE / VOID
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entity, entityId])
+}
