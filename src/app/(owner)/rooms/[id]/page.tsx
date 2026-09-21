@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, FileSignature } from "lucide-react";
+import { ChevronLeft, FileSignature, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { maskIdCard } from "@/lib/crypto";
 import { bangkokToday } from "@/lib/period";
-import { money, thDate, thPeriod } from "@/lib/format";
+import { money, thDate, thDateTime, thPeriod } from "@/lib/format";
 import { PageHead } from "@/components/PageHead";
 import { SubmitButton } from "@/components/SubmitButton";
-import { CONTRACT_STATUS, INVOICE_STATUS, ROOM_STATUS, StatusBadge } from "@/components/StatusBadge";
+import { CONTRACT_STATUS, INVOICE_STATUS, MAINTENANCE_STATUS, ROOM_STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -48,6 +48,12 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
     take: 8,
     include: { period: true },
   });
+  const jobs = await db.maintenanceRequest.findMany({
+    where: { roomId: room.id },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    include: { assignedTo: { select: { name: true } } },
+  });
   const today = bangkokToday().toISOString().slice(0, 10);
   const water = room.meters.find((m) => m.utility === "WATER");
   const electric = room.meters.find((m) => m.utility === "ELECTRIC");
@@ -66,6 +72,11 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
           </span>
         }
       >
+        <Button variant="outline" asChild>
+          <Link href={`/maintenance/new?room=${room.id}`}>
+            <Wrench /> แจ้งซ่อม
+          </Link>
+        </Button>
         {active ? (
           <MoveOutDialog
             contractId={active.id}
@@ -221,6 +232,35 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
               )}
             </TableBody>
           </Table>
+        </Card>
+
+        <Card className="lg:col-span-3">
+          <CardHeader className="border-b">
+            <CardTitle>งานแจ้งซ่อม</CardTitle>
+            <CardAction>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/maintenance/new?room=${room.id}`}>เปิดงานใหม่</Link>
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            {jobs.length === 0 && <p className="text-muted-foreground">ยังไม่มีงานแจ้งซ่อมของห้องนี้</p>}
+            {jobs.map((j) => (
+              <div key={j.id} className="flex flex-wrap items-center gap-3 text-sm">
+                <StatusBadge map={MAINTENANCE_STATUS[j.status]} />
+                <Link href={`/maintenance/${j.id}`} className="flex-1 hover:underline">
+                  {j.title} <span className="text-subtle num text-xs">{j.ticketNo}</span>
+                </Link>
+                <span className="text-muted-foreground">{j.assignedTo?.name ?? "ยังไม่มอบหมาย"}</span>
+                {j.cost && (
+                  <span className="num text-muted-foreground">
+                    {money(j.cost.toNumber(), 0)} บาท{j.chargeTenant ? " (เก็บผู้เช่า)" : ""}
+                  </span>
+                )}
+                <span className="text-subtle text-xs">{thDateTime(j.createdAt, false)}</span>
+              </div>
+            ))}
+          </CardContent>
         </Card>
 
         {room.contracts.filter((c) => c.status !== "ACTIVE").length > 0 && (

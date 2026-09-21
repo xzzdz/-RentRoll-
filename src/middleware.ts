@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/session-token";
 
-const OWNER_PATHS = ["/dashboard", "/rooms", "/tenants", "/contracts", "/meters", "/billing", "/settings", "/print"];
+const OWNER_PATHS = ["/dashboard", "/rooms", "/tenants", "/contracts", "/meters", "/billing", "/maintenance", "/settings", "/print"];
 const TECH_PATHS = ["/tech"];
 
 export async function middleware(req: NextRequest) {
@@ -29,6 +29,7 @@ export const config = {
     "/contracts/:path*",
     "/meters/:path*",
     "/billing/:path*",
+    "/maintenance/:path*",
     "/settings/:path*",
     "/print/:path*",
     "/tech/:path*",

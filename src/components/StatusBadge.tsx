@@ -1,4 +1,4 @@
-import type { ContractStatus, InvoiceStatus, RoomStatus } from "@prisma/client";
+import type { ContractStatus, InvoiceStatus, MaintenanceStatus, Priority, RoomStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 
 type V = "info" | "ok" | "warn" | "bad" | "muted";
@@ -24,6 +24,20 @@ export const CONTRACT_STATUS: Record<ContractStatus, [V, string]> = {
   ACTIVE: ["ok", "ใช้งาน"],
   ENDED: ["muted", "สิ้นสุด"],
   TERMINATED: ["bad", "ยกเลิก"],
+};
+
+export const MAINTENANCE_STATUS: Record<MaintenanceStatus, [V, string]> = {
+  NEW: ["bad", "แจ้งใหม่"],
+  ASSIGNED: ["warn", "มอบหมายแล้ว"],
+  IN_PROGRESS: ["info", "กำลังซ่อม"],
+  DONE: ["ok", "เสร็จแล้ว"],
+  CANCELLED: ["muted", "ยกเลิก"],
+};
+
+export const PRIORITY: Record<Priority, [V, string]> = {
+  LOW: ["muted", "ไม่เร่ง"],
+  NORMAL: ["muted", "ปกติ"],
+  URGENT: ["bad", "ด่วน"],
 };
 
 export function StatusBadge({ map }: { map: [V, string] }) {

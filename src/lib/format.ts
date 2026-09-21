@@ -10,6 +10,16 @@ export function thDate(d: Date) {
   return `${d.getUTCDate()} ${TH_MONTH_SHORT[d.getUTCMonth()]} ${d.getUTCFullYear() + 543}`;
 }
 
+/**
+ * วันที่/เวลาของ timestamp ตามเวลาไทย เช่น 5 ต.ค. 2569 14:32
+ * (ต่างจาก thDate ที่ใช้กับคอลัมน์ @db.Date ซึ่งเก็บเป็น UTC เที่ยงคืนอยู่แล้ว)
+ */
+export function thDateTime(d: Date, withTime = true) {
+  const b = new Date(d.getTime() + 7 * 3600_000);
+  const time = `${String(b.getUTCHours()).padStart(2, "0")}:${String(b.getUTCMinutes()).padStart(2, "0")}`;
+  return withTime ? `${thDate(b)} ${time}` : thDate(b);
+}
+
 /** กันยายน 2569 */
 export function thPeriod(period: Date) {
   return `${TH_MONTH_FULL[period.getUTCMonth()]} ${period.getUTCFullYear() + 543}`;

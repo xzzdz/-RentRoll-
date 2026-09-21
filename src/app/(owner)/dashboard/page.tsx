@@ -4,8 +4,9 @@ import { db } from "@/lib/db";
 import { addMonths, bangkokToday, periodOf } from "@/lib/period";
 import { money, thDate, thPeriod } from "@/lib/format";
 import { PAYABLE } from "@/lib/invoice";
+import { OPEN_STATUS } from "@/lib/maintenance";
 import { PageHead } from "@/components/PageHead";
-import { StatusBadge, INVOICE_STATUS } from "@/components/StatusBadge";
+import { StatusBadge, INVOICE_STATUS, MAINTENANCE_STATUS } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
   const in60 = new Date(today.getTime() + 60 * 86_400_000);
   const activeRoom = { room: { contracts: { some: { status: "ACTIVE" as const } } } };
 
-  const [totalRooms, occupied, activeContracts, meterCount, readCount, ending, buildings, payable, attention] = await Promise.all([
+  const [totalRooms, occupied, activeContracts, meterCount, readCount, ending, buildings, payable, attention, openJobs, newJobs, openCount] = await Promise.all([
     db.room.count(),
     db.room.count({ where: { status: "OCCUPIED" } }),
     db.contract.count({ where: { status: "ACTIVE" } }),
@@ -34,6 +35,14 @@ export default async function DashboardPage() {
       take: 6,
       include: { contract: { include: { room: true } } },
     }),
+    db.maintenanceRequest.findMany({
+      where: { status: { in: OPEN_STATUS } },
+      orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
+      take: 6,
+      include: { room: { select: { number: true } }, assignedTo: { select: { name: true } } },
+    }),
+    db.maintenanceRequest.count({ where: { status: "NEW" } }),
+    db.maintenanceRequest.count({ where: { status: { in: OPEN_STATUS } } }),
   ]);
 
   const outstanding = (payable._sum.total?.toNumber() ?? 0) - (payable._sum.paidAmount?.toNumber() ?? 0);
@@ -47,6 +56,7 @@ export default async function DashboardPage() {
     { label: "สัญญาที่ใช้งาน", value: String(activeContracts), sub: `ใกล้หมดใน 60 วัน ${ending} สัญญา` },
     { label: "จดมิเตอร์รอบนี้", value: `${pct(readCount, meterCount)}%`, sub: `${readCount} / ${meterCount} มิเตอร์` },
     { label: "ยอดค้างรับ", value: money(outstanding, 0), sub: `บาท · ${payable._count} บิล`, tone: outstanding > 0 ? "text-destructive" : "" },
+    { label: "งานซ่อมค้างอยู่", value: String(openCount), sub: `รอมอบหมาย ${newJobs} งาน`, tone: newJobs > 0 ? "text-destructive" : "" },
   ];
 
   return (
@@ -120,6 +130,34 @@ export default async function DashboardPage() {
                       <span className="num">{money(i.total.toNumber() - i.paidAmount.toNumber())}</span> บาท
                     </Link>
                     {i.dueDate && <span className="text-subtle text-xs">ครบ {thDate(i.dueDate)}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader className="border-b">
+            <CardTitle>งานซ่อมค้างอยู่</CardTitle>
+            <CardAction>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/maintenance">ไปหน้าแจ้งซ่อม</Link>
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            {openJobs.length === 0 ? (
+              <p className="text-muted-foreground">ไม่มีงานซ่อมค้าง</p>
+            ) : (
+              <ul className="divide-y">
+                {openJobs.map((j) => (
+                  <li key={j.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
+                    <StatusBadge map={MAINTENANCE_STATUS[j.status]} />
+                    <Link href={`/maintenance/${j.id}`} className="flex-1 hover:underline">
+                      ห้อง <b>{j.room.number}</b> · {j.title}
+                    </Link>
+                    <span className="text-subtle text-xs">{j.assignedTo?.name ?? "ยังไม่มอบหมาย"}</span>
                   </li>
                 ))}
               </ul>

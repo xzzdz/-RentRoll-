@@ -13,6 +13,7 @@ const ITEMS = [
   { href: "/tenants", label: "ผู้เช่า & สัญญา", icon: Users, also: ["/contracts"] },
   { href: "/meters", label: "จดมิเตอร์", icon: Gauge },
   { href: "/billing", label: "บิล & ใบเสร็จ", icon: ReceiptText },
+  { href: "/maintenance", label: "แจ้งซ่อม", icon: Wrench },
   { href: "/settings", label: "ตั้งค่า", icon: Settings },
 ];
 
@@ -41,9 +42,6 @@ export function Sidebar({ name, propertyName }: { name: string; propertyName: st
           </Link>
         );
       })}
-      <span className="text-subtle hidden items-center gap-2.5 px-3 py-2 md:flex" title="เฟสถัดไป">
-        <Wrench className="size-4" aria-hidden /> แจ้งซ่อม <span className="text-[11px]">· เร็ว ๆ นี้</span>
-      </span>
       <div className="mt-4 hidden border-t pt-3 text-[12.5px] md:block">
         <div className="eyebrow">เข้าสู่ระบบในฐานะ</div>
         <b>{name}</b> · เจ้าของ

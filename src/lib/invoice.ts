@@ -112,7 +112,9 @@ export async function loadBillingRows(propertyId: string, period: Date): Promise
         ...l,
         meterReadingId: l.type === "WATER" ? w?.currId : l.type === "ELECTRIC" ? e?.currId : null,
       }));
-      for (const r of repairs.filter((x) => x.roomId === c.roomId)) {
+      // ผูกตามผู้เช่าด้วย ไม่ใช่แค่ห้อง — กันค่าซ่อมของผู้เช่าคนก่อนไปโผล่ในบิลของผู้เช่ารายใหม่
+      const roomRepairs = repairs.filter((x) => x.roomId === c.roomId && c.tenants.some((t) => t.tenantId === x.tenantId));
+      for (const r of roomRepairs) {
         const cost = r.cost!.toNumber();
         lines.push({ type: "REPAIR", description: `ค่าซ่อม: ${r.title} (${r.ticketNo})`, quantity: 1, unitPrice: cost, amount: cost, maintenanceId: r.id });
       }
