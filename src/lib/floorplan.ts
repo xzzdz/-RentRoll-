@@ -1,7 +1,7 @@
 // ผังแต่ละชั้นของตึก — เก็บเป็น JSON บน Building.floorPlan
 // ไฟล์นี้ต้องไม่แตะฐานข้อมูล เพราะตัวแก้ผังฝั่ง client ก็ import ไปใช้
 
-export type PlanCellType = "ROOM" | "CORRIDOR" | "STAIRS" | "ELEVATOR" | "WC" | "EMPTY";
+export type PlanCellType = "ROOM" | "CORRIDOR" | "STAIRS" | "ENTRANCE" | "ELEVATOR" | "WC" | "EMPTY";
 
 export type PlanCell = { t: PlanCellType; roomId?: string | null };
 
@@ -16,12 +16,14 @@ export const CELL_META: Record<PlanCellType, { label: string; short: string; cla
   ROOM: { label: "ห้องพัก", short: "ห้อง", className: "bg-accent text-accent-foreground border-transparent" },
   CORRIDOR: { label: "ทางเดิน", short: "ทางเดิน", className: "bg-muted text-muted-foreground border-transparent" },
   STAIRS: { label: "บันได", short: "บันได", className: "bg-warn-soft text-warn border-transparent" },
+  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", className: "bg-chart-1/15 text-chart-1 border-chart-1/40" },
   ELEVATOR: { label: "ลิฟต์", short: "ลิฟต์", className: "bg-warn-soft text-warn border-transparent" },
   WC: { label: "ห้องน้ำรวม", short: "ห้องน้ำ", className: "bg-ok-soft text-ok border-transparent" },
   EMPTY: { label: "ว่าง (ไม่ใช่พื้นที่)", short: "—", className: "bg-transparent text-subtle border-dashed" },
 };
 
-export const PAINT_TOOLS: PlanCellType[] = ["CORRIDOR", "STAIRS", "ELEVATOR", "WC", "EMPTY"];
+/** เรียงตามที่ใช้บ่อย — ทางเดินกับบันไดคือสองอย่างที่วาดเยอะสุด */
+export const PAINT_TOOLS: PlanCellType[] = ["CORRIDOR", "STAIRS", "ENTRANCE", "ELEVATOR", "WC", "EMPTY"];
 
 const isCellType = (v: unknown): v is PlanCellType => typeof v === "string" && v in CELL_META;
 
@@ -80,6 +82,16 @@ export function resizeCols(cells: PlanCell[], from: number, to: number): PlanCel
     }
   }
   return out;
+}
+
+/** วางห้องที่ยังไม่ได้วาง ลงช่องว่างเรียงจากซ้ายไปขวา บนลงล่าง */
+export function autoPlaceRooms(cells: PlanCell[], roomIds: string[]): PlanCell[] {
+  const next = [...cells];
+  const queue = [...roomIds];
+  for (let i = 0; i < next.length && queue.length; i++) {
+    if (next[i].t === "EMPTY") next[i] = { t: "ROOM", roomId: queue.shift()! };
+  }
+  return next;
 }
 
 export function placedRoomIds(plan: FloorPlan): Set<string> {
