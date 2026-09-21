@@ -20,6 +20,11 @@ export function thDateTime(d: Date, withTime = true) {
   return withTime ? `${thDate(b)} ${time}` : thDate(b);
 }
 
+/** ก.ย. 69 — ใช้เป็นป้ายแกนกราฟที่พื้นที่แคบ */
+export function thMonthShort(period: Date) {
+  return `${TH_MONTH_SHORT[period.getUTCMonth()]} ${String((period.getUTCFullYear() + 543) % 100).padStart(2, "0")}`;
+}
+
 /** กันยายน 2569 */
 export function thPeriod(period: Date) {
   return `${TH_MONTH_FULL[period.getUTCMonth()]} ${period.getUTCFullYear() + 543}`;

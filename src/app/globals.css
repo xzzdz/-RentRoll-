@@ -3,35 +3,93 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ธีม shadcn/ui — โทนน้ำเงินเหล็กเดียวกับ mockup */
+/* ---------------------------------------------------------------
+   ธีม — โทนเขียวน้ำทะเล (teal) สื่อความน่าเชื่อถือ + อ่านสบายตา
+   ทุกสีต้องมีคู่ light/dark เสมอ ห้ามใส่ hex ตรง ๆ ใน component
+   --------------------------------------------------------------- */
 :root {
-  --radius: 0.625rem;
-  --background: #f2f5f7;
-  --foreground: #14202b;
+  --radius: 0.875rem;
+
+  --background: #f6f8f8;
+  --foreground: #0f1d1c;
   --card: #ffffff;
-  --card-foreground: #14202b;
+  --card-foreground: #0f1d1c;
   --popover: #ffffff;
-  --popover-foreground: #14202b;
-  --primary: #1f5f8b;
+  --popover-foreground: #0f1d1c;
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
-  --secondary: #e8eef2;
-  --secondary-foreground: #14202b;
-  --muted: #e8eef2;
-  --muted-foreground: #4b5968;
-  --accent: #ddeaf4;
-  --accent-foreground: #1f5f8b;
-  --destructive: #b23a2e;
-  --border: #d4dce3;
-  --input: #d4dce3;
-  --ring: #1f5f8b;
+  --secondary: #edf2f2;
+  --secondary-foreground: #0f1d1c;
+  --muted: #edf2f2;
+  --muted-foreground: #55686a;
+  --accent: #d9f2ee;
+  --accent-foreground: #0b5b54;
+  --destructive: #c62828;
+  --border: #dce5e5;
+  --input: #dce5e5;
+  --ring: #14b8a6;
 
   /* สีสถานะเพิ่มเติม */
-  --subtle: #7a8896;
-  --ok: #2a7a4c;
-  --ok-soft: #ddf0e4;
-  --warn: #9a6414;
-  --warn-soft: #f7ebd3;
-  --bad-soft: #f6deda;
+  --subtle: #64797a;
+  --ok: #15803d;
+  --ok-soft: #dcfce7;
+  --warn: #b45309;
+  --warn-soft: #fef3c7;
+  --bad-soft: #fee2e2;
+
+  /* แถบเนวิเกชัน */
+  --rail: #0d3d39;
+  --rail-foreground: #cfe9e5;
+  --rail-active: #14b8a6;
+
+  /* ชุดสีกราฟ — ผ่าน validator ของสกิล dataviz ทั้งช่วงความสว่าง ความอิ่มสี
+     และระยะห่างสำหรับตาบอดสี (protan/deutan/tritan) บนพื้นโหมดสว่าง */
+  --chart-1: #0d9488;
+  --chart-2: #b45309;
+  --chart-3: #2563eb;
+
+  --shadow-soft: 0 1px 2px rgb(15 29 28 / 0.04), 0 2px 8px rgb(15 29 28 / 0.04);
+  --shadow-lift: 0 4px 12px rgb(15 29 28 / 0.08), 0 12px 32px rgb(15 29 28 / 0.06);
+}
+
+.dark {
+  --background: #0b1413;
+  --foreground: #e6efee;
+  --card: #121d1c;
+  --card-foreground: #e6efee;
+  --popover: #121d1c;
+  --popover-foreground: #e6efee;
+  --primary: #2dd4bf;
+  --primary-foreground: #06201d;
+  --secondary: #1b2827;
+  --secondary-foreground: #e6efee;
+  --muted: #1b2827;
+  --muted-foreground: #9bb0ae;
+  --accent: #17332f;
+  --accent-foreground: #7fe7da;
+  --destructive: #f87171;
+  --border: #263534;
+  --input: #263534;
+  --ring: #2dd4bf;
+
+  --subtle: #8ba1a0;
+  --ok: #4ade80;
+  --ok-soft: #10301f;
+  --warn: #fbbf24;
+  --warn-soft: #362707;
+  --bad-soft: #3b1a19;
+
+  --rail: #071110;
+  --rail-foreground: #b6d4d0;
+  --rail-active: #2dd4bf;
+
+  /* โหมดมืดต้องเลือกเฉดใหม่ ไม่ใช่กลับด้านของโหมดสว่าง — ชุดนี้ผ่าน validator บนพื้นมืด */
+  --chart-1: #0ea5a0;
+  --chart-2: #d97706;
+  --chart-3: #4f8ef7;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
+  --shadow-lift: 0 4px 12px rgb(0 0 0 / 0.5), 0 12px 32px rgb(0 0 0 / 0.4);
 }
 
 @theme inline {
@@ -59,6 +117,15 @@
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-bad-soft: var(--bad-soft);
+  --color-rail: var(--rail);
+  --color-rail-foreground: var(--rail-foreground);
+  --color-rail-active: var(--rail-active);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lift: var(--shadow-lift);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -74,10 +141,89 @@
   * {
     @apply border-border outline-ring/50;
   }
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
   body {
     @apply bg-background text-foreground;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1.55;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* กันเนื้อหาชนแถบเนวิเกชันล่างบนมือถือที่มีขอบจอโค้ง */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+  button,
+  [role="button"],
+  a[href] {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* โมชัน — สั้น มีความหมาย และเคารพการปิดแอนิเมชันของผู้ใช้ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@utility animate-rise {
+  animation: rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* หน่วงทีละชิ้นให้การ์ดไล่กันขึ้นมา — ใช้กับลูกของ grid */
+@utility stagger {
+  & > * {
+    animation: rise 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  & > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+  & > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+  & > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+  & > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+  & > *:nth-child(n + 6) {
+    animation-delay: 200ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

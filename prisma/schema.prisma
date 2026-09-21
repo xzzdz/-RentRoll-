@@ -192,8 +192,12 @@ model Building {
   id         String   @id @default(cuid())
   propertyId String
   name       String   // ตึก A, ตึก B
+  code       String?  // ตัวอักษรนำหน้าเลขห้อง เช่น A → A-101
   floors     Int
   sortOrder  Int      @default(0)
+  // ผังแต่ละชั้น (ทางเดิน บันได ลิฟต์ ฯลฯ) — โครงสร้างอยู่ใน src/lib/floorplan.ts
+  // ว่างไว้ได้ หน้าผังห้องจะ fallback ไปเรียงห้องเป็นตารางอัตโนมัติ
+  floorPlan  Json?
   createdAt  DateTime @default(now())
 
   property     Property             @relation(fields: [propertyId], references: [id], onDelete: Cascade)

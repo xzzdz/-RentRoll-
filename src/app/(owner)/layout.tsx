@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { requireRole } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Sidebar } from "@/components/Sidebar";
+import { AppShell } from "@/components/shell/AppShell";
 import { FlashToast } from "@/components/FlashToast";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -10,9 +10,8 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
   const property = await db.property.findFirst({ select: { name: true } });
 
   return (
-    <div className="mx-auto grid max-w-[1320px] gap-6 px-4 py-6 md:grid-cols-[220px_1fr]">
-      <Sidebar name={session.name} propertyName={property?.name ?? "หอพัก"} />
-      <main className="min-w-0">
+    <>
+      <AppShell name={session.name} propertyName={property?.name ?? "หอพัก"}>
         {property ? (
           children
         ) : (
@@ -20,11 +19,11 @@ export default async function OwnerLayout({ children }: { children: React.ReactN
             ยังไม่มีข้อมูลหอพัก — รัน <code className="num">npm run db:seed</code> ก่อน
           </div>
         )}
-      </main>
+      </AppShell>
       <Suspense>
         <FlashToast />
       </Suspense>
       <Toaster />
-    </div>
+    </>
   );
 }
