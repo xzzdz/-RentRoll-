@@ -10,7 +10,9 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // แอปต่อผ่าน connection pooler ส่วน migrate/introspect ต้องต่อตรง (pooler แบบ transaction ใช้ไม่ได้)
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------------------------------------------------------------

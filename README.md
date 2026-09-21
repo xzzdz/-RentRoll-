@@ -4,7 +4,7 @@ Next.js 15 (App Router) + TypeScript · PostgreSQL + Prisma 6 · Tailwind CSS 4 
 
 ## เริ่มใช้งาน (Windows / PowerShell)
 
-ต้องมี **Node.js 20+** และ **Docker Desktop** (หรือ PostgreSQL ที่ติดตั้งเอง)
+ต้องมี **Node.js 20+** และ PostgreSQL สักที่ — จะเป็น **Docker Desktop** ในเครื่อง, PostgreSQL ที่ติดตั้งเอง หรือ **Supabase/คลาวด์** ก็ได้ (ดู [ใช้ฐานข้อมูลบนคลาวด์](#ใช้ฐานข้อมูลบนคลาวด์-supabase))
 
 ```powershell
 cd D:\Project\dorm-manager
@@ -13,7 +13,7 @@ cd D:\Project\dorm-manager
 copy .env.example .env
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
-# 1) ฐานข้อมูล (ข้ามได้ถ้ามี PostgreSQL อยู่แล้ว — แก้ DATABASE_URL ใน .env)
+# 1) ฐานข้อมูล (ข้ามได้ถ้าใช้ Supabase/คลาวด์ หรือมี PostgreSQL อยู่แล้ว — แก้ DATABASE_URL ใน .env)
 docker compose up -d
 
 # 2) ติดตั้งแพ็กเกจ (จะรัน prisma generate ให้อัตโนมัติ)
@@ -35,6 +35,26 @@ npm run dev
 | ช่าง | 0800000001 | changeme123 |
 
 > ตอนขึ้น production ให้สุ่ม `AUTH_SECRET` ใหม่และเปลี่ยนรหัสผ่านเริ่มต้น
+
+## ใช้ฐานข้อมูลบนคลาวด์ (Supabase)
+
+ไม่ต้องเปิด Docker — เอา connection string จาก Supabase Dashboard → **Connect** → แท็บ **ORMs** → **Prisma** แล้วใส่ทั้งสองบรรทัดใน `.env`
+
+```
+DATABASE_URL="postgresql://postgres.<ref>:<รหัส>@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.<ref>:<รหัส>@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+```
+
+ต้องมีสองบรรทัดเพราะ `DATABASE_URL` ต่อผ่าน **transaction pooler** (พอร์ต 6543) ซึ่งเร็วและรองรับการต่อพร้อมกันเยอะ แต่ใช้รัน migration ไม่ได้ — `prisma migrate` เลยใช้ `DIRECT_URL` (พอร์ต 5432) แทน ตั้งไว้ใน [schema.prisma](prisma/schema.prisma) แล้ว
+
+สร้างตารางครั้งแรก (บนคลาวด์ใช้ `deploy` ไม่ใช่ `dev`):
+
+```powershell
+npx prisma migrate deploy
+npm run db:seed
+```
+
+เลือก region ให้ใกล้ผู้ใช้ — `ap-southeast-1` (สิงคโปร์) เร็วสุดสำหรับไทย
 
 ## ทำแล้ว
 
