@@ -4,26 +4,13 @@ import { Banknote, PencilRuler, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { money } from "@/lib/format";
 import { CELL_META, parsePlan, rowsOf } from "@/lib/floorplan";
+import { ROOM_TILE as TILE, ROOM_TILE_OVERDUE as TILE_OVERDUE, roomTileClass } from "@/lib/room-style";
 import { cn } from "@/lib/utils";
 import { PageHead } from "@/components/PageHead";
 import { BuildingTabs } from "@/components/BuildingTabs";
 import { CellContent, PlanLegend } from "@/components/FloorPlanCell";
 import { ROOM_STATUS } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-
-/**
- * สีบอกสถานะห้องแบบเห็นปราดเดียว — เขียวคือห้องทำรายได้ เหลืองคือกำลังจะเข้า
- * ขาวขอบประคือยังว่าง เทาลายทแยงคือใช้ไม่ได้
- */
-const TILE: Record<RoomStatus, string> = {
-  OCCUPIED: "bg-room-live text-room-live-fg border-room-live-bd",
-  VACANT: "bg-card text-room-free-fg border-room-free-bd border-dashed",
-  RESERVED: "bg-room-hold text-room-hold-fg border-room-hold-bd",
-  MAINTENANCE: "bg-room-closed text-room-closed-fg border-room-closed-bd hatch",
-};
-
-/** ค้างชำระทับสีสถานะเดิมเสมอ เพราะเป็นสิ่งที่เจ้าของต้องเห็นก่อนอย่างอื่น */
-const TILE_OVERDUE = "bg-room-due text-room-due-fg border-room-due-bd";
 
 type RoomTile = {
   id: string;
@@ -219,7 +206,7 @@ function Tile({ room, square }: { room: RoomTile; square?: boolean }) {
       className={cn(
         "hover:ring-primary relative rounded-lg border px-1.5 py-1 transition-shadow hover:ring-2",
         square ? "grid aspect-square place-content-center text-center" : "min-h-[56px]",
-        room.overdue ? TILE_OVERDUE : TILE[room.status],
+        roomTileClass(room.status, room.overdue),
       )}
     >
       <span className={cn("absolute flex gap-0.5", square ? "top-1 right-1" : "top-1.5 right-1.5")}>

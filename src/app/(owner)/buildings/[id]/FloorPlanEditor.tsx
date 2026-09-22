@@ -16,8 +16,10 @@ import {
   type PlanCell,
   type PlanCellType,
 } from "@/lib/floorplan";
+import { ROOM_TILE, roomTileClass } from "@/lib/room-style";
 import { cn } from "@/lib/utils";
-import { CellContent, CellIcon } from "@/components/FloorPlanCell";
+import { CellContent, CellIcon, PlanLegend } from "@/components/FloorPlanCell";
+import { ROOM_STATUS } from "@/components/StatusBadge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -267,7 +269,8 @@ export function FloorPlanEditor({
                       aria-pressed={on}
                       className={cn(
                         "num min-h-9 rounded-lg border px-2.5 text-[13px] font-semibold",
-                        on ? "border-primary ring-primary/30 bg-accent text-accent-foreground ring-2" : "bg-card hover:bg-muted",
+                        ROOM_TILE[r.status],
+                        on && "ring-primary border-primary ring-2",
                       )}
                     >
                       {r.number}
@@ -299,7 +302,7 @@ export function FloorPlanEditor({
                     aria-label={`แถว ${Math.floor(i / plan.cols) + 1} ช่อง ${(i % plan.cols) + 1} — ${room?.number ?? CELL_META[c.t].label}`}
                     className={cn(
                       "grid aspect-square place-items-center rounded-md border text-[9.5px] leading-tight font-medium select-none",
-                      CELL_META[c.t].className,
+                      room ? roomTileClass(room.status) : CELL_META[c.t].className,
                       "hover:ring-primary/40 hover:ring-2",
                     )}
                   >
@@ -310,8 +313,22 @@ export function FloorPlanEditor({
             </div>
           </div>
 
+          {/* คำอธิบายสัญลักษณ์ — ชุดเดียวกับหน้าผังห้อง */}
+          <div className="grid gap-2 border-t pt-3">
+            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px]">
+              <span className="eyebrow">สถานะห้อง</span>
+              {(Object.keys(ROOM_TILE) as (keyof typeof ROOM_TILE)[]).map((s) => (
+                <span key={s} className="text-muted-foreground inline-flex items-center gap-1.5">
+                  <i className={cn("inline-block size-4 rounded border", ROOM_TILE[s])} />
+                  {ROOM_STATUS[s][1]}
+                </span>
+              ))}
+            </div>
+            <PlanLegend />
+          </div>
+
           {/* ขนาดตาราง */}
-          <div className="flex flex-wrap items-center gap-3 text-[13px]">
+          <div className="flex flex-wrap items-center gap-3 border-t pt-3 text-[13px]">
             <div className="flex items-center gap-1">
               <Columns3 className="text-subtle size-4" aria-hidden />
               <span className="text-muted-foreground">คอลัมน์</span>
