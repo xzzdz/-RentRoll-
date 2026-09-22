@@ -11,22 +11,11 @@ export const metadata: Metadata = {
   description: "จัดการห้อง ผู้เช่า มิเตอร์ บิล และงานซ่อม",
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f7fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0f17" },
-  ],
-};
-
-// เลือกธีมก่อนหน้าจอวาดครั้งแรก กันจอกะพริบขาวตอนโหลดในโหมดมืด
-const themeInit = `(function(){try{var t=localStorage.getItem("theme");if(t==="dark"||(!t&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.classList.add("dark")}catch(e){}})()`;
+export const viewport: Viewport = { themeColor: "#fafafa" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="th" className={`${body.variable} ${display.variable} ${mono.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInit }} />
-      </head>
+    <html lang="th" className={`${body.variable} ${display.variable} ${mono.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

@@ -6,7 +6,7 @@ export function Splash({ label = "กำลังเตรียมข้อม�
   return (
     <div role="status" aria-live="polite" className="bg-background grid min-h-dvh place-items-center px-6">
       <div className="grid justify-items-center gap-4">
-        <span className="bg-primary text-primary-foreground font-display animate-rise grid size-16 place-items-center rounded-2xl text-2xl font-bold shadow-[var(--shadow-lift)]">
+        <span className="bg-primary text-primary-foreground font-display animate-rise grid size-14 place-items-center rounded-xl text-xl font-bold">
           บส
         </span>
         <div className="grid justify-items-center gap-1 text-center">

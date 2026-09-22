@@ -1,96 +1,56 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* คงไว้เพื่อให้ utility ที่ขึ้นต้นด้วย dark: (ถ้ามีติดมากับ component ใหม่) ไม่ทำงาน
+   เพราะระบบนี้ใช้ธีมเดียว ไม่มีการใส่คลาส .dark ที่ไหนเลย */
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------
-   ธีม — โทนม่วง-คราม (indigo/violet) บนพื้นเทาอมม่วง
-   ทุกคู่สีข้อความ/พื้นผ่าน WCAG AA (>= 4.5:1) ทั้งสองโหมด
-   ทุกสีต้องมีคู่ light/dark เสมอ ห้ามใส่ hex ตรง ๆ ใน component
+   ธีมเดียว — พื้นขาว-เทากลาง + สีหลักม่วงครามสีเดียว
+   สีหลักใช้เฉพาะจุดที่ต้องการให้กด/ให้สังเกต ที่เหลือเป็นเทาล้วน
+   สีสถานะเก็บไว้เท่าที่จำเป็นต่อการอ่านบิล และทำให้จางที่สุด
+   ทุกคู่สีข้อความ/พื้นผ่าน WCAG AA (>= 4.5:1) · ห้ามใส่ hex ตรง ๆ ใน component
    --------------------------------------------------------------- */
 :root {
-  --radius: 0.875rem;
+  --radius: 0.625rem;
 
-  --background: #f7f7fb;
-  --foreground: #191927;
+  --background: #fafafa;
+  --foreground: #18181b;
   --card: #ffffff;
-  --card-foreground: #191927;
+  --card-foreground: #18181b;
   --popover: #ffffff;
-  --popover-foreground: #191927;
+  --popover-foreground: #18181b;
   --primary: #4f46e5;
   --primary-foreground: #ffffff;
-  --secondary: #eeeef6;
-  --secondary-foreground: #191927;
-  --muted: #eeeef6;
-  --muted-foreground: #5a5a72;
-  --accent: #e6e5fb;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #18181b;
+  --muted: #f4f4f5;
+  --muted-foreground: #52525b;
+  --accent: #eef2ff;
   --accent-foreground: #4338ca;
-  --destructive: #c62828;
-  --border: #e2e2ee;
-  --input: #e2e2ee;
-  --ring: #6366f1;
+  --destructive: #b91c1c;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #4f46e5;
 
-  /* สีสถานะเพิ่มเติม — จงใจให้อยู่คนละโทนกับสีแบรนด์ จะได้ไม่สับสนกับสถานะบิล */
-  --subtle: #6b6b85;
+  --subtle: #71717a;
   --ok: #15803d;
-  --ok-soft: #dcfce7;
-  --warn: #b45309;
-  --warn-soft: #fef3c7;
-  --bad-soft: #fee2e2;
+  --ok-soft: #f0fdf4;
+  --warn: #a16207;
+  --warn-soft: #fefce8;
+  --bad-soft: #fef2f2;
 
-  /* แถบเนวิเกชัน */
-  --rail: #232145;
-  --rail-foreground: #d6d5f0;
-  --rail-active: #a5b4fc;
+  /* แถบเนวิเกชัน — พื้นขาวเหมือนกัน แยกด้วยเส้นขอบแทนการใช้สีทึบ */
+  --rail: #ffffff;
+  --rail-foreground: #52525b;
+  --rail-active: #4f46e5;
 
-  /* ชุดสีกราฟ — ผ่าน validator ของสกิล dataviz ทั้งช่วงความสว่าง ความอิ่มสี
-     และระยะห่างสำหรับตาบอดสี (protan/deutan/tritan) บนพื้นโหมดสว่าง */
+  /* กราฟใช้สีหลักสีเดียว ส่วนที่เหลือเป็นเทากลางที่ยังตัดกับพื้นพอ (>= 3:1) */
   --chart-1: #4f46e5;
-  --chart-2: #b45309;
-  --chart-3: #0d9488;
+  --chart-2: #8e8e9b;
 
-  --shadow-soft: 0 1px 2px rgb(25 25 39 / 0.04), 0 2px 8px rgb(25 25 39 / 0.05);
-  --shadow-lift: 0 4px 12px rgb(25 25 39 / 0.08), 0 12px 32px rgb(25 25 39 / 0.07);
-}
-
-.dark {
-  --background: #0f0f17;
-  --foreground: #e8e8f4;
-  --card: #171725;
-  --card-foreground: #e8e8f4;
-  --popover: #171725;
-  --popover-foreground: #e8e8f4;
-  --primary: #a5b4fc;
-  --primary-foreground: #16162a;
-  --secondary: #22223a;
-  --secondary-foreground: #e8e8f4;
-  --muted: #22223a;
-  --muted-foreground: #a0a0bd;
-  --accent: #262450;
-  --accent-foreground: #c7d2fe;
-  --destructive: #f87171;
-  --border: #2c2c46;
-  --input: #2c2c46;
-  --ring: #818cf8;
-
-  --subtle: #8f8fae;
-  --ok: #4ade80;
-  --ok-soft: #10301f;
-  --warn: #fbbf24;
-  --warn-soft: #362707;
-  --bad-soft: #3b1a19;
-
-  --rail: #0b0b14;
-  --rail-foreground: #c3c2e4;
-  --rail-active: #a5b4fc;
-
-  /* โหมดมืดต้องเลือกเฉดใหม่ ไม่ใช่กลับด้านของโหมดสว่าง — ชุดนี้ผ่าน validator บนพื้นมืด */
-  --chart-1: #6366f1;
-  --chart-2: #d97706;
-  --chart-3: #0ea5a0;
-
-  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
-  --shadow-lift: 0 4px 12px rgb(0 0 0 / 0.5), 0 12px 32px rgb(0 0 0 / 0.4);
+  --shadow-soft: 0 1px 2px rgb(24 24 27 / 0.04);
+  --shadow-lift: 0 2px 4px rgb(24 24 27 / 0.05), 0 8px 24px rgb(24 24 27 / 0.06);
 }
 
 @theme inline {
@@ -123,7 +83,6 @@
   --color-rail-active: var(--rail-active);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
 
   --shadow-soft: var(--shadow-soft);
   --shadow-lift: var(--shadow-lift);
@@ -144,9 +103,6 @@
   }
   :root {
     color-scheme: light;
-  }
-  .dark {
-    color-scheme: dark;
   }
   body {
     @apply bg-background text-foreground;

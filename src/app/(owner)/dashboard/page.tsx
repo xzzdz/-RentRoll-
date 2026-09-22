@@ -152,18 +152,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 points={series.map((s) => s.occupied)}
                 labels={labels}
                 unit={`/ ${rooms.total} ห้อง`}
-                tone="chart-1"
               />
             </CardContent>
           </Card>
           <Card>
             <CardContent>
-              <Sparkline title="หน่วยน้ำรวม" points={series.map((s) => s.water)} labels={labels} unit="หน่วย" tone="chart-3" />
+              <Sparkline title="หน่วยน้ำรวม" points={series.map((s) => s.water)} labels={labels} unit="หน่วย" />
             </CardContent>
           </Card>
           <Card>
             <CardContent>
-              <Sparkline title="หน่วยไฟรวม" points={series.map((s) => s.electric)} labels={labels} unit="หน่วย" tone="chart-2" />
+              <Sparkline title="หน่วยไฟรวม" points={series.map((s) => s.electric)} labels={labels} unit="หน่วย" />
             </CardContent>
           </Card>
         </div>

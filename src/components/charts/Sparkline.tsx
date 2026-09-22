@@ -11,14 +11,12 @@ export function Sparkline({
   labels,
   unit,
   decimals = 0,
-  tone = "chart-1",
 }: {
   title: string;
   points: number[];
   labels: string[];
   unit: string;
   decimals?: number;
-  tone?: "chart-1" | "chart-2" | "chart-3";
 }) {
   const W = 300;
   const H = 88;
@@ -46,7 +44,7 @@ export function Sparkline({
       </figcaption>
 
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[88px] w-full" role="img" aria-label={`${title} ${points.map((p, i) => `${labels[i]} ${p}`).join(", ")}`}>
-        <path d={area} className={cn("fill-current opacity-10", tone === "chart-1" ? "text-chart-1" : tone === "chart-2" ? "text-chart-2" : "text-chart-3")} />
+        <path d={area} className="text-chart-1 fill-current opacity-10" />
         <path
           d={line}
           fill="none"
@@ -54,7 +52,7 @@ export function Sparkline({
           strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
-          className={cn("stroke-current", tone === "chart-1" ? "text-chart-1" : tone === "chart-2" ? "text-chart-2" : "text-chart-3")}
+          className="text-chart-1 stroke-current"
         />
         {points.map((v, i) => (
           <circle
@@ -62,7 +60,7 @@ export function Sparkline({
             cx={x(i)}
             cy={y(v)}
             r={i === points.length - 1 ? 4 : 2.5}
-            className={cn("fill-current", tone === "chart-1" ? "text-chart-1" : tone === "chart-2" ? "text-chart-2" : "text-chart-3")}
+            className="text-chart-1 fill-current"
           >
             <title>{`${labels[i]}: ${money(v, decimals)} ${unit}`}</title>
           </circle>
