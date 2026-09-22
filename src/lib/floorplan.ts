@@ -12,14 +12,22 @@ export const MIN_COLS = 3;
 export const MAX_COLS = 16;
 export const MAX_CELLS = 400;
 
-export const CELL_META: Record<PlanCellType, { label: string; short: string; className: string }> = {
-  ROOM: { label: "ห้องพัก", short: "ห้อง", className: "bg-accent text-accent-foreground border-transparent" },
-  CORRIDOR: { label: "ทางเดิน", short: "ทางเดิน", className: "bg-muted text-muted-foreground border-transparent" },
-  STAIRS: { label: "บันได", short: "บันได", className: "bg-warn-soft text-warn border-transparent" },
-  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", className: "bg-chart-1/15 text-chart-1 border-chart-1/40" },
-  ELEVATOR: { label: "ลิฟต์", short: "ลิฟต์", className: "bg-warn-soft text-warn border-transparent" },
-  WC: { label: "ห้องน้ำรวม", short: "ห้องน้ำ", className: "bg-ok-soft text-ok border-transparent" },
-  EMPTY: { label: "ว่าง (ไม่ใช่พื้นที่)", short: "—", className: "bg-transparent text-subtle border-dashed" },
+/** ไอคอนของช่อง — ตัวจริงอยู่ใน components/FloorPlanCell.tsx (ไฟล์นี้ต้องไม่มี JSX) */
+export type CellIconName = "stairs" | "elevator" | "door" | "bath" | null;
+
+/**
+ * พื้นที่ส่วนกลางทั้งหมดเป็น "เทา" เหมือนกันหมด แล้วแยกด้วยไอคอน
+ * เพราะสีในระบบนี้สงวนไว้บอกสถานะห้อง ถ้าเอาสีมาแยกบันได/ลิฟต์/ห้องน้ำด้วย
+ * ผังจะกลายเป็นสีรุ้งจนดูไม่ออกว่าห้องไหนต้องจัดการ
+ */
+export const CELL_META: Record<PlanCellType, { label: string; short: string; icon: CellIconName; className: string }> = {
+  ROOM: { label: "ห้องพัก", short: "ห้อง", icon: null, className: "bg-card text-foreground border-border" },
+  CORRIDOR: { label: "ทางเดิน", short: "", icon: null, className: "bg-muted text-subtle border-transparent" },
+  STAIRS: { label: "บันได", short: "บันได", icon: "stairs", className: "bg-secondary text-muted-foreground border-border" },
+  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", icon: "door", className: "bg-secondary text-foreground border-foreground/30" },
+  ELEVATOR: { label: "ลิฟต์", short: "ลิฟต์", icon: "elevator", className: "bg-secondary text-muted-foreground border-border" },
+  WC: { label: "ห้องน้ำรวม", short: "ห้องน้ำ", icon: "bath", className: "bg-secondary text-muted-foreground border-border" },
+  EMPTY: { label: "ว่าง (ไม่ใช่พื้นที่)", short: "", icon: null, className: "bg-transparent text-subtle border-dashed" },
 };
 
 /** เรียงตามที่ใช้บ่อย — ทางเดินกับบันไดคือสองอย่างที่วาดเยอะสุด */

@@ -17,6 +17,7 @@ import {
   type PlanCellType,
 } from "@/lib/floorplan";
 import { cn } from "@/lib/utils";
+import { CellContent, CellIcon } from "@/components/FloorPlanCell";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -237,7 +238,7 @@ export function FloorPlanEditor({
                       t === "EMPTY" ? "border-dashed" : CELL_META[t].className,
                     )}
                   >
-                    {t === "EMPTY" && <Eraser className="size-3.5" aria-hidden />}
+                    {t === "EMPTY" ? <Eraser className="size-3.5" aria-hidden /> : <CellIcon name={CELL_META[t].icon} className="size-3.5" />}
                     {t === "EMPTY" ? "ยางลบ" : CELL_META[t].label}
                   </button>
                 );
@@ -302,7 +303,7 @@ export function FloorPlanEditor({
                       "hover:ring-primary/40 hover:ring-2",
                     )}
                   >
-                    {room ? <span className="num text-[11px] font-bold">{room.number}</span> : c.t === "EMPTY" ? "" : CELL_META[c.t].short}
+                    {room ? <span className="num text-[11px] font-bold">{room.number}</span> : <CellContent type={c.t} compact />}
                   </button>
                 );
               })}

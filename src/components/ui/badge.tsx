@@ -13,8 +13,9 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         destructive: "border-transparent bg-destructive text-white",
         outline: "text-foreground",
-        // สถานะ (เพิ่มจากชุดมาตรฐาน)
-        info: "border-transparent bg-accent text-accent-foreground",
+        // สถานะ — ไล่ระดับ 5 ขั้นตามภาษาสีใน globals.css
+        // info ตั้งใจเป็นเทาเข้ม ไม่ใช่สีแบรนด์ เพราะสีแบรนด์สงวนไว้ให้สิ่งที่กดได้
+        info: "border-transparent bg-foreground/10 text-foreground",
         ok: "border-transparent bg-ok-soft text-ok",
         warn: "border-transparent bg-warn-soft text-warn",
         bad: "border-transparent bg-bad-soft text-destructive",

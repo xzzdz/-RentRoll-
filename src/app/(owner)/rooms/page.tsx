@@ -1,20 +1,25 @@
 import Link from "next/link";
 import type { RoomStatus } from "@prisma/client";
-import { PencilRuler } from "lucide-react";
+import { Banknote, PencilRuler, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { money } from "@/lib/format";
 import { CELL_META, parsePlan, rowsOf } from "@/lib/floorplan";
 import { cn } from "@/lib/utils";
 import { PageHead } from "@/components/PageHead";
 import { BuildingTabs } from "@/components/BuildingTabs";
+import { CellContent, PlanLegend } from "@/components/FloorPlanCell";
 import { ROOM_STATUS } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 
+/**
+ * ยิ่งต้องลงมือทำ ยิ่งเด่น — ห้องที่มีผู้เช่าคือสถานะปกติจึงเงียบที่สุด
+ * ห้องว่างใช้ขอบประ (ช่องโล่ง = ว่าง) ไม่ใช้สี เพราะสีเก็บไว้ให้สิ่งที่ผิดปกติ
+ */
 const TILE: Record<RoomStatus, string> = {
-  OCCUPIED: "bg-accent text-accent-foreground border-transparent",
-  VACANT: "border-dashed bg-transparent",
-  RESERVED: "bg-warn-soft text-warn border-transparent",
-  MAINTENANCE: "bg-bad-soft text-destructive border-transparent",
+  OCCUPIED: "bg-card border-border",
+  VACANT: "bg-background border-dashed border-foreground/35",
+  RESERVED: "bg-warn-soft border-warn/30 text-warn",
+  MAINTENANCE: "bg-muted hatch border-border text-muted-foreground",
 };
 
 type RoomTile = {
@@ -25,7 +30,8 @@ type RoomTile = {
   tenant: string | null;
   rent: number;
   typeName: string;
-  flag: "overdue" | "repair" | null;
+  overdue: boolean;
+  repair: boolean;
 };
 
 export default async function RoomsPage({ searchParams }: { searchParams: Promise<{ b?: string }> }) {
@@ -57,10 +63,10 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
       _count: { select: { maintenance: { where: { status: { in: ["NEW", "ASSIGNED", "IN_PROGRESS"] } } } } },
     },
   });
-  const overdue = new Set(
+  const overdueIds = new Set(
     (
       await db.invoice.findMany({
-        where: { status: "OVERDUE", contract: { room: { buildingId: building.id } } },
+        where: { status: { in: ["OVERDUE", "PARTIAL"] }, contract: { room: { buildingId: building.id } } },
         select: { contract: { select: { roomId: true } } },
       })
     ).map((i) => i.contract.roomId),
@@ -74,12 +80,16 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
     tenant: r.contracts[0]?.tenants[0]?.tenant.fullName ?? null,
     rent: (r.rentOverride ?? r.roomType.baseRent).toNumber(),
     typeName: r.roomType.name,
-    flag: overdue.has(r.id) ? "overdue" : r._count.maintenance > 0 ? "repair" : null,
+    overdue: overdueIds.has(r.id),
+    repair: r._count.maintenance > 0,
   }));
+
   const byId = new Map(tiles.map((t) => [t.id, t]));
   const plan = parsePlan(building.floorPlan);
   const floors = [...new Set(tiles.map((t) => t.floor))].sort((a, b) => b - a);
   const count = (s: RoomStatus) => tiles.filter((t) => t.status === s).length;
+  const overdueCount = tiles.filter((t) => t.overdue).length;
+  const repairCount = tiles.filter((t) => t.repair).length;
 
   return (
     <>
@@ -93,19 +103,32 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
       </PageHead>
 
       <div className="bg-card rounded-xl border">
-        <div className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1.5 border-b px-4 py-3 text-[12.5px]">
-          {(Object.keys(TILE) as RoomStatus[]).map((s) => (
-            <span key={s} className="inline-flex items-center gap-1.5">
-              <i className={cn("inline-block size-3.5 rounded border", TILE[s])} />
-              {ROOM_STATUS[s][1]} <span className="num">({count(s)})</span>
-            </span>
-          ))}
-          <span className="inline-flex items-center gap-1.5">
-            <i className="bg-destructive inline-block size-2 rounded-full" /> ค้างชำระ
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <i className="bg-warn inline-block size-2 rounded-full" /> มีงานซ่อม
-          </span>
+        {/* คำอธิบายสัญลักษณ์ — แยกสองแถว: สถานะห้อง กับ สิ่งที่ต้องตาม */}
+        <div className="grid gap-2 border-b px-4 py-3">
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px]">
+            {(Object.keys(TILE) as RoomStatus[]).map((s) => (
+              <span key={s} className="inline-flex items-center gap-1.5">
+                <i className={cn("inline-block size-4 rounded border", TILE[s])} />
+                {ROOM_STATUS[s][1]} <span className="num">({count(s)})</span>
+              </span>
+            ))}
+          </div>
+          {(overdueCount > 0 || repairCount > 0) && (
+            <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-2 text-[12px]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-destructive bg-bad-soft grid size-4 place-items-center rounded">
+                  <Banknote className="size-2.5" aria-hidden />
+                </span>
+                ค้างชำระ <span className="num">({overdueCount})</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="text-warn bg-warn-soft grid size-4 place-items-center rounded">
+                  <Wrench className="size-2.5" aria-hidden />
+                </span>
+                มีงานซ่อม <span className="num">({repairCount})</span>
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-1 p-3 lg:p-4">
@@ -129,32 +152,28 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
                 </div>
 
                 {cells && plan ? (
-                  /* ผังที่จัดไว้เอง — มีทางเดิน บันได ตามที่วาด */
+                  /* ผังที่จัดไว้เอง — พื้นที่ส่วนกลางเป็นเทา แยกด้วยไอคอน */
                   <div className="overflow-x-auto">
                     <div
                       className="grid gap-1"
                       style={{
-                        gridTemplateColumns: `repeat(${plan.cols}, minmax(42px, 1fr))`,
+                        gridTemplateColumns: `repeat(${plan.cols}, minmax(44px, 1fr))`,
                         maxWidth: `${plan.cols * 88}px`,
                         gridTemplateRows: `repeat(${rowsOf(cells, plan.cols)}, auto)`,
                       }}
                     >
                       {cells.map((c, i) => {
                         const room = c.t === "ROOM" && c.roomId ? byId.get(c.roomId) : null;
-                        if (!room) {
-                          return (
-                            <div
-                              key={i}
-                              className={cn(
-                                "text-subtle grid aspect-square place-items-center rounded-md border text-[9.5px]",
-                                CELL_META[c.t].className,
-                              )}
-                            >
-                              {c.t === "EMPTY" ? "" : CELL_META[c.t].short}
-                            </div>
-                          );
-                        }
-                        return <Tile key={i} room={room} square />;
+                        if (room) return <Tile key={i} room={room} square />;
+                        return (
+                          <div
+                            key={i}
+                            title={c.t === "EMPTY" ? undefined : CELL_META[c.t].label}
+                            className={cn("grid aspect-square place-items-center rounded-md border", CELL_META[c.t].className)}
+                          >
+                            <CellContent type={c.t} compact />
+                          </div>
+                        );
                       })}
                     </div>
                   </div>
@@ -170,6 +189,12 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
             );
           })}
         </div>
+
+        {plan && (
+          <div className="border-t px-4 py-3">
+            <PlanLegend />
+          </div>
+        )}
       </div>
 
       {!plan && tiles.length > 0 && (
@@ -185,25 +210,26 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
 }
 
 function Tile({ room, square }: { room: RoomTile; square?: boolean }) {
+  const flags = [room.overdue && "ค้างชำระ", room.repair && "มีงานซ่อม"].filter(Boolean).join(" · ");
   return (
     <Link
       href={`/rooms/${room.id}`}
-      title={`${room.number} · ${room.typeName} · ${money(room.rent, 0)} บาท${room.tenant ? ` · ${room.tenant}` : ""}`}
+      title={`${room.number} · ${room.typeName} · ${money(room.rent, 0)} บาท${room.tenant ? ` · ${room.tenant}` : ""}${flags ? ` · ${flags}` : ""}`}
       className={cn(
         "hover:ring-primary relative rounded-md border px-1.5 py-1 transition-shadow hover:ring-2",
         square ? "grid aspect-square place-content-center text-center" : "min-h-[54px]",
         TILE[room.status],
+        // ค้างชำระเป็นแถบแดงด้านซ้าย ไม่ใช่เปลี่ยนสีพื้นทั้งช่อง สถานะห้องจึงยังอ่านได้พร้อมกัน
+        room.overdue && "shadow-[inset_3px_0_0_var(--destructive)]",
       )}
     >
-      {room.flag && (
-        <i
-          className={cn("absolute top-1 right-1 size-2 rounded-full", room.flag === "overdue" ? "bg-destructive" : "bg-warn")}
-          aria-label={room.flag === "overdue" ? "ค้างชำระ" : "มีงานซ่อม"}
-        />
-      )}
+      <span className={cn("absolute top-0.5 right-0.5 flex gap-0.5", square && "top-0 right-0")}>
+        {room.overdue && <Banknote className="text-destructive size-3" aria-label="ค้างชำระ" />}
+        {room.repair && <Wrench className="text-warn size-3" aria-label="มีงานซ่อม" />}
+      </span>
       <span className="num block text-[12.5px] font-bold">{room.number}</span>
       {!square && (
-        <span className="block truncate text-[11px] opacity-75">{room.tenant ? room.tenant.split(" ")[0] : ROOM_STATUS[room.status][1]}</span>
+        <span className="text-muted-foreground block truncate text-[11px]">{room.tenant ? room.tenant.split(" ")[0] : ROOM_STATUS[room.status][1]}</span>
       )}
     </Link>
   );
