@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
-import { assertRoomInScope } from "@/lib/scope";
+import { assertContractInScope, assertRoomInScope } from "@/lib/scope";
 import { encrypt } from "@/lib/crypto";
 import { nextDocNo } from "@/lib/docno";
 import { periodOf } from "@/lib/period";
@@ -122,4 +122,67 @@ export async function createContract(_prev: ContractFormState, f: FormData): Pro
 
   revalidatePath("/rooms");
   redirect(withFlash(`/rooms/${room.id}`, "ok", `ทำสัญญา ${contract.contractNo} แล้ว`));
+}
+
+/**
+ * แก้ไข/ต่อสัญญาที่ยังใช้งานอยู่ — ค่าเช่า เงินประกัน วันเริ่ม-สิ้นสุด หมายเหตุ
+ *
+ * ค่าเช่าใหม่มีผลกับบิลรอบถัดไปเท่านั้น เพราะบิลที่ออกไปแล้วเก็บรายการเป็นของตัวเอง
+ * ส่วนวันเริ่มสัญญาแก้ได้เฉพาะตอนที่ยังไม่มีบิลจริง เพราะมันไปเปลี่ยนการคิดค่าเช่าตามวัน
+ * ของเดือนแรก ถ้าบิลออกไปแล้วจะกลายเป็นยอดที่อธิบายกับผู้เช่าไม่ได้
+ */
+export async function updateContract(f: FormData) {
+  const session = await requireRole("OWNER");
+  const contractId = str(f, "contractId");
+  const { contract: found } = await assertContractInScope(contractId);
+  const back = `/rooms/${found.roomId}`;
+
+  const c = await db.contract.findUniqueOrThrow({ where: { id: contractId } });
+  if (c.status !== "ACTIVE") redirect(withFlash(back, "err", "แก้ได้เฉพาะสัญญาที่ยังใช้งานอยู่"));
+
+  const monthlyRent = num(f, "monthlyRent");
+  const depositAmount = num(f, "depositAmount");
+  const startDate = date(f, "startDate");
+  const endDate = date(f, "endDate");
+
+  if (monthlyRent == null || Number.isNaN(monthlyRent)) redirect(withFlash(back, "err", "กรอกค่าเช่าให้ถูกต้อง"));
+  if (depositAmount == null || Number.isNaN(depositAmount)) redirect(withFlash(back, "err", "กรอกเงินประกันให้ถูกต้อง"));
+  if (!startDate) redirect(withFlash(back, "err", "เลือกวันเริ่มสัญญา"));
+  if (endDate && endDate <= startDate) redirect(withFlash(back, "err", "วันสิ้นสุดต้องหลังวันเริ่มสัญญา"));
+
+  const issued = await db.invoice.count({ where: { contractId, status: { notIn: ["DRAFT", "VOID"] } } });
+  if (issued > 0 && startDate.getTime() !== c.startDate.getTime()) {
+    redirect(withFlash(back, "err", `แก้วันเริ่มสัญญาไม่ได้ — ออกบิลไปแล้ว ${issued} ใบ`));
+  }
+
+  await db.contract.update({
+    where: { id: contractId },
+    data: { monthlyRent, depositAmount, startDate, endDate, note: str(f, "note") || null },
+  });
+  await db.auditLog.create({
+    data: {
+      userId: session.userId,
+      entity: "Contract",
+      entityId: contractId,
+      action: "UPDATE",
+      before: {
+        monthlyRent: c.monthlyRent.toNumber(),
+        depositAmount: c.depositAmount.toNumber(),
+        startDate: c.startDate.toISOString().slice(0, 10),
+        endDate: c.endDate?.toISOString().slice(0, 10) ?? null,
+      },
+      after: {
+        monthlyRent,
+        depositAmount,
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate?.toISOString().slice(0, 10) ?? null,
+      },
+    },
+  });
+
+  revalidatePath("/tenants");
+  revalidatePath("/billing");
+  revalidatePath(back);
+  const renewed = endDate && (!c.endDate || endDate > c.endDate);
+  redirect(withFlash(back, "ok", renewed ? `ต่อสัญญาถึง ${endDate!.toISOString().slice(0, 10)} แล้ว` : "บันทึกสัญญาแล้ว"));
 }

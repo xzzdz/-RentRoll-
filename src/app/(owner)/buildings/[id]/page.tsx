@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { emptyPlan, parsePlan, prunePlan } from "@/lib/floorplan";
 import { LinkTabs } from "@/components/LinkTabs";
 import { PageHead } from "@/components/PageHead";
@@ -27,8 +28,10 @@ export default async function BuildingDetailPage({
   const { tab = "rooms" } = await searchParams;
   const current = TABS.find((t) => t.key === tab) ?? TABS[0];
 
-  const building = await db.building.findUnique({
-    where: { id },
+  // ต้องเป็นตึกในหอของผู้ใช้เท่านั้น ไม่งั้นรู้ id ก็เปิดดูผังและรายการห้องของหออื่นได้
+  const propertyId = await currentPropertyId();
+  const building = await db.building.findFirst({
+    where: { id, propertyId },
     include: {
       rooms: {
         orderBy: [{ floor: "asc" }, { number: "asc" }],
@@ -39,7 +42,7 @@ export default async function BuildingDetailPage({
   if (!building) notFound();
 
   const roomTypes = await db.roomType.findMany({
-    where: { propertyId: building.propertyId },
+    where: { propertyId },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole, currentPropertyId } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
-import { applyLateFee, BillingError, generateDrafts, issueInvoices, recordPayment, voidInvoice } from "@/lib/invoice";
+import { BillingError, applyLateFee, generateDrafts, issueInvoices, recordPayment, voidInvoice, voidPayment } from "@/lib/invoice";
 import { assertInvoiceInScope } from "@/lib/scope";
 
 const periodParam = (f: FormData) => {
@@ -102,4 +102,27 @@ export async function paymentAction(_prev: PaymentState, f: FormData): Promise<P
   }
   revalidatePath("/billing");
   redirect(withFlash(`/billing/${id}`, "ok", `รับชำระแล้ว · ออกใบเสร็จ ${receiptNo}`));
+}
+
+/** ยกเลิกการรับชำระที่คีย์ผิด — ปลดยอดออกจากบิลแล้วประทับใบเสร็จว่ายกเลิก */
+export async function voidPaymentAction(f: FormData) {
+  const session = await requireRole("OWNER");
+  const invoiceId = String(f.get("invoiceId"));
+  await assertInvoiceInScope(invoiceId);
+  const paymentId = String(f.get("paymentId"));
+  const back = `/billing/${invoiceId}`;
+
+  // payment ต้องเป็นของบิลใบที่ตรวจ scope มาแล้ว ไม่งั้นยิง paymentId ของบิลอื่นมาได้
+  const owned = await db.payment.findFirst({ where: { id: paymentId, invoiceId }, select: { id: true } });
+  if (!owned) redirect(withFlash(back, "err", "ไม่พบรายการรับชำระในบิลใบนี้"));
+
+  try {
+    const r = await voidPayment(paymentId, String(f.get("reason") ?? "").trim(), session.userId);
+    revalidatePath("/billing");
+    revalidatePath(back);
+    redirect(withFlash(back, "ok", r.receiptNo ? `ยกเลิกใบเสร็จ ${r.receiptNo} แล้ว` : "ยกเลิกรายการรับชำระแล้ว"));
+  } catch (e) {
+    if (e instanceof BillingError) redirect(withFlash(back, "err", e.message));
+    throw e;
+  }
 }

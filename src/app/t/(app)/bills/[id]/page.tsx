@@ -30,7 +30,7 @@ export default async function TenantBillPage({ params }: { params: Promise<{ id:
   // (และหน้านี้อยู่ใต้ loading.tsx ทำให้ notFound() ส่งสถานะ 404 จริงไม่ได้อยู่แล้ว)
   if (!owns) redirect(withFlash("/t/bills", "err", "ไม่พบบิลใบนี้ในบัญชีของคุณ"));
 
-  const doc = await getInvoiceDoc(id);
+  const doc = await getInvoiceDoc(id, t.propertyId);
   if (!doc) redirect(withFlash("/t/bills", "err", "ไม่พบบิลใบนี้"));
 
   const left = doc.total - doc.paidAmount;

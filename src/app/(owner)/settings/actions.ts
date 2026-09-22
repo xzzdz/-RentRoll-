@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireRole, currentPropertyId } from "@/lib/auth";
+import { assertOwnRow, assertUserInScope } from "@/lib/scope";
 import { periodOf } from "@/lib/period";
 import { withFlash } from "@/lib/flash";
 
@@ -186,6 +187,7 @@ export async function addFee(f: FormData) {
 export async function updateFee(f: FormData) {
   await requireRole("OWNER");
   const id = String(f.get("id"));
+  await assertOwnRow("feeItem", id, "ค่าบริการ");
   const fee = await db.feeItem.findUnique({ where: { id } });
   if (!fee) redirect(withFlash("/settings/fees", "err", "ไม่พบรายการ"));
 
@@ -208,6 +210,7 @@ export async function updateFee(f: FormData) {
 export async function deleteFee(f: FormData) {
   await requireRole("OWNER");
   const id = String(f.get("id"));
+  await assertOwnRow("feeItem", id, "ค่าบริการ");
   const used = await db.contractFee.count({ where: { feeItemId: id } });
   if (used > 0) {
     await db.feeItem.update({ where: { id }, data: { isActive: false } });
@@ -244,6 +247,8 @@ export async function setUserActive(f: FormData) {
   const id = String(f.get("id"));
   const active = f.get("active") === "1";
   if (id === session.userId) redirect(withFlash("/settings/team", "err", "ปิดบัญชีตัวเองไม่ได้"));
+  // จัดการได้เฉพาะบัญชีในหอเดียวกัน ไม่งั้นยิง id ข้ามหามาปิดบัญชีคนอื่นได้
+  await assertUserInScope(id);
 
   const open = active ? 0 : await db.maintenanceRequest.count({ where: { assignedToId: id, status: { in: ["ASSIGNED", "IN_PROGRESS"] } } });
   if (open > 0) redirect(withFlash("/settings/team", "err", `ช่างคนนี้มีงานค้างอยู่ ${open} งาน — มอบหมายต่อให้คนอื่นก่อน`));
@@ -260,6 +265,8 @@ export async function resetPassword(_prev: PasswordState, f: FormData): Promise<
   const id = String(f.get("id"));
   const password = String(f.get("password") ?? "");
   if (password.length < 8) return { error: "รหัสผ่านอย่างน้อย 8 ตัวอักษร" };
+  // ตั้งรหัสผ่านใหม่ได้เฉพาะบัญชีในหอเดียวกัน ไม่งั้นสวมสิทธิ์เจ้าของหออื่นได้
+  await assertUserInScope(id);
   await db.user.update({ where: { id }, data: { passwordHash: await bcrypt.hash(password, 10) } });
   redirect(withFlash("/settings/team", "ok", "ตั้งรหัสผ่านใหม่แล้ว"));
 }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, PlayCircle } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { bangkokToday } from "@/lib/period";
 import { money, thDate, thDateTime } from "@/lib/format";
 import { PageHead } from "@/components/PageHead";
@@ -26,8 +27,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function MaintenanceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const job = await db.maintenanceRequest.findUnique({
-    where: { id },
+  // งานซ่อมต้องอยู่ในหอของผู้ใช้ ไม่งั้นรู้ id ก็เปิดดูงาน ชื่อผู้เช่า และเบอร์โทรของหออื่นได้
+  const propertyId = await currentPropertyId();
+  const job = await db.maintenanceRequest.findFirst({
+    where: { id, room: { building: { propertyId } } },
     include: {
       room: { include: { building: true } },
       tenant: true,
@@ -39,7 +42,7 @@ export default async function MaintenanceDetailPage({ params }: { params: Promis
   if (!job) notFound();
 
   const techs = await db.user.findMany({
-    where: { role: "TECHNICIAN", isActive: true },
+    where: { role: "TECHNICIAN", isActive: true, propertyId },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

@@ -1,9 +1,13 @@
 import { db } from "./db";
 
-/** ข้อมูลใบแจ้งหนี้/ใบเสร็จ สำหรับแสดงผลและพิมพ์ */
-export async function getInvoiceDoc(id: string) {
-  const inv = await db.invoice.findUnique({
-    where: { id },
+/**
+ * ข้อมูลใบแจ้งหนี้/ใบเสร็จ สำหรับแสดงผลและพิมพ์
+ * propertyId บังคับใส่เสมอ — บิลใบหนึ่งมีทั้งชื่อ เบอร์ และยอดเงินของผู้เช่า
+ * ถ้าไม่ผูกกับหอของคนเปิด ใครรู้ id ก็เปิดดูบิลของหออื่นได้
+ */
+export async function getInvoiceDoc(id: string, propertyId: string) {
+  const inv = await db.invoice.findFirst({
+    where: { id, contract: { room: { building: { propertyId } } } },
     include: {
       period: true,
       items: { orderBy: { sortOrder: "asc" } },

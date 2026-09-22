@@ -1,13 +1,13 @@
 import { notFound } from "next/navigation";
-import { requireRole } from "@/lib/auth";
+import { currentPropertyId } from "@/lib/auth";
 import { getInvoiceDoc } from "@/lib/invoice-doc";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { PrintBar } from "../../PrintBar";
 
 export default async function PrintInvoicePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireRole("OWNER");
+  const propertyId = await currentPropertyId();
   const { id } = await params;
-  const doc = await getInvoiceDoc(id);
+  const doc = await getInvoiceDoc(id, propertyId);
   if (!doc) notFound();
   return (
     <div className="min-h-screen bg-neutral-200 print:bg-white">

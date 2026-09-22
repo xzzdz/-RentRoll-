@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { safePath } from "@/lib/flash";
 import { createSession, destroySession, homeFor } from "@/lib/auth";
 
 export type LoginState = { error?: string } | undefined;
@@ -24,7 +25,7 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
 
   await createSession({ userId: user.id, role: user.role, name: user.name, propertyId: user.propertyId });
   // กัน open redirect: รับเฉพาะ path ภายใน
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : homeFor(user.role));
+  redirect(safePath(next, homeFor(user.role)));
 }
 
 export async function logout() {

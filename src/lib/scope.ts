@@ -60,3 +60,25 @@ export async function assertOwnRow(
   if (!found) throw new ScopeError(label);
   return propertyId;
 }
+
+/** มิเตอร์ต้องอยู่ในห้องของหอเดียวกัน — หน้าจดมิเตอร์ส่ง meterId มาจากฝั่ง client */
+export async function assertMeterInScope(meterId: string) {
+  const propertyId = await currentPropertyId();
+  const meter = await db.meter.findFirst({
+    where: { id: meterId, room: { building: { propertyId } } },
+    select: { id: true, isActive: true },
+  });
+  if (!meter) throw new ScopeError("มิเตอร์");
+  return { propertyId, meter };
+}
+
+/**
+ * บัญชีผู้ใช้ที่เจ้าของจัดการได้ = บัญชีที่สังกัดหอเดียวกันเท่านั้น
+ * ถ้าไม่ตรวจ เจ้าของหอหนึ่งจะตั้งรหัสผ่านใหม่ให้เจ้าของอีกหอแล้วสวมสิทธิ์เข้าไปได้
+ */
+export async function assertUserInScope(userId: string) {
+  const propertyId = await currentPropertyId();
+  const user = await db.user.findFirst({ where: { id: userId, propertyId }, select: { id: true, name: true, role: true } });
+  if (!user) throw new ScopeError("บัญชีผู้ใช้");
+  return { propertyId, user };
+}

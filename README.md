@@ -166,9 +166,41 @@ curl.exe -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron
 
 > token รุ่นก่อนที่ไม่มี `propertyId` ใช้ไม่ได้แล้ว ผู้ใช้เดิมต้องล็อกอินใหม่หนึ่งครั้ง
 
+## เข้าสู่ระบบด้วย LINE (LIFF)
+
+ผู้เช่ากดจากเมนูใน LINE แล้วเข้าได้เลย ไม่ต้องจำรหัส · **เว้นตัวแปรว่างไว้ได้** ระบบจะซ่อนปุ่ม LINE
+ให้เองและใช้การล็อกอินด้วยรหัสเข้าใช้งานตามเดิม
+
+**1. สร้างช่องทางใน [LINE Developers Console](https://developers.line.biz/console/)**
+
+New Provider → Create channel → เลือก **LINE Login**
+
+**2. สร้าง LIFF app** — ในช่องทางนั้น แท็บ **LIFF** → Add
+
+| ตั้งค่า | ค่าที่ใช้ |
+|---|---|
+| Size | `Full` |
+| Endpoint URL | `https://<โดเมนของคุณ>/t/line` |
+| Scopes | ติ๊ก **openid** และ **profile** (ไม่มี `openid` จะไม่ได้ ID token) |
+
+**3. ใส่ตัวแปร** ทั้งใน `.env` และใน Environment Variables ของ Vercel
+
+| ตัวแปร | เอามาจาก | ความลับ |
+|---|---|---|
+| `NEXT_PUBLIC_LIFF_ID` | แท็บ LIFF → LIFF ID | ไม่ใช่ (ไปถึงเบราว์เซอร์) |
+| `LINE_LOGIN_CHANNEL_ID` | แท็บ Basic settings → Channel ID | ใช้ฝั่งเซิร์ฟเวอร์เท่านั้น |
+
+**ครั้งแรกยังต้องกรอกรหัสเข้าใช้งาน + เบอร์** เพราะ LINE ยืนยันได้แค่ว่า *"คนนี้คือเจ้าของบัญชี LINE นี้"*
+แต่บอกไม่ได้ว่าเป็นผู้เช่าห้องไหนของหอไหน · ผูกแล้ว LINE user id จะถูกเก็บใน `User.lineUserId`
+ครั้งต่อไปเปิดจาก LINE แล้วเข้าได้เลย
+
+> **ID token ถูกส่งไปให้ LINE ตรวจลายเซ็นเสมอ** (`POST /oauth2/v2.1/verify` พร้อม `client_id`)
+> ไม่ได้ถอด JWT อ่านเองแล้วเชื่อ ไม่งั้นใครก็ปลอม token มาสวมเป็นผู้เช่าคนอื่นได้ ·
+> บัญชี LINE หนึ่งผูกได้กับผู้เช่าคนเดียว
+
 ## ต่อไป
 
-1. LINE LIFF ผู้เช่า + LINE Login + แจ้งเตือนบิล/สถานะงานซ่อม (ต้องมีบัญชี LINE Developers)
+1. แจ้งเตือนผ่าน LINE (บิลออก / งานซ่อมคืบหน้า) — ตาราง `Notification` เตรียมไว้แล้ว ต้องใช้ช่อง Messaging API เพิ่ม
 2. แนบรูปงานซ่อม (ตาราง `MaintenancePhoto` เตรียมไว้แล้ว รอที่เก็บไฟล์)
 3. PromptPay QR + ตรวจสลิป
 4. PDF ฝั่ง server (สำหรับส่งทาง LINE)

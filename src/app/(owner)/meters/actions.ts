@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
+import { assertMeterInScope, ScopeError } from "@/lib/scope";
 import { periodOf } from "@/lib/period";
 
 export type SaveResult = { ok: true } | { ok: false; error: string };
@@ -12,8 +13,16 @@ export async function saveReading(meterId: string, value: number | null): Promis
   const period = periodOf();
   const key = { meterId_periodMonth_isInitial: { meterId, periodMonth: period, isInitial: false } };
 
-  const meter = await db.meter.findUnique({ where: { id: meterId }, select: { isActive: true } });
-  if (!meter?.isActive) return { ok: false, error: "ไม่พบมิเตอร์" };
+  // มิเตอร์ต้องอยู่ในหอของผู้ใช้จริง ไม่งั้นยิง meterId ข้ามหอมาเขียนเลขทับได้
+  // ตรงนี้คืน error กลับไปให้ช่องกรอก ไม่โยนทิ้ง เพราะหน้าจดมิเตอร์บันทึกทีละช่องแบบไม่รีโหลด
+  let meter;
+  try {
+    ({ meter } = await assertMeterInScope(meterId));
+  } catch (e) {
+    if (e instanceof ScopeError) return { ok: false, error: e.message };
+    throw e;
+  }
+  if (!meter.isActive) return { ok: false, error: "ไม่พบมิเตอร์" };
 
   const existing = await db.meterReading.findUnique({ where: key });
 

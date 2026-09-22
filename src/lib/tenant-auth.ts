@@ -3,7 +3,7 @@ import type { InvoiceStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { db } from "./db";
 import { requireRole } from "./auth";
-import { INVITE_ALPHABET, INVITE_LENGTH } from "./invite-code";
+import { INVITE_ALPHABET, INVITE_LENGTH, normalizeInviteCode, normalizePhone } from "./invite-code";
 
 /**
  * รหัสเข้าเว็บของผู้เช่า
@@ -75,3 +75,64 @@ export async function currentTenant() {
 export const TENANT_INVOICE: InvoiceStatus[] = ["ISSUED", "PARTIAL", "PAID", "OVERDUE"];
 
 export type TenantContext = Awaited<ReturnType<typeof currentTenant>>;
+
+/** ข้อความเดียวกันทุกกรณีที่เข้าไม่ได้ — ไม่บอกว่าผิดรหัสหรือผิดเบอร์ จะได้ไล่เดาไม่ได้ */
+export const TENANT_DENY = "รหัสเข้าใช้งานหรือเบอร์โทรไม่ถูกต้อง";
+
+export type TenantResolve = { ok: true; tenant: ResolvedTenant; propertyId: string } | { ok: false; error: string };
+
+type ResolvedTenant = { id: string; fullName: string; userId: string | null };
+
+/**
+ * หาผู้เช่าจาก "รหัสเข้าใช้งาน + เบอร์ในสัญญา"
+ * ใช้ร่วมกันทั้งตอนล็อกอินด้วยรหัส และตอนผูกบัญชี LINE ครั้งแรก
+ * ทั้งสองทางต้องผ่านด่านเดียวกัน ไม่งั้นทางหนึ่งหลวมกว่าอีกทางโดยไม่มีใครรู้
+ */
+export async function resolveTenantByCode(rawCode: string, rawPhone: string): Promise<TenantResolve> {
+  const code = normalizeInviteCode(rawCode);
+  const phone = normalizePhone(rawPhone);
+  if (!code || !phone) return { ok: false, error: "กรอกรหัสเข้าใช้งานและเบอร์โทรของคุณ" };
+
+  const tenant = await db.tenant.findUnique({
+    where: { inviteCode: code },
+    include: {
+      user: { select: { id: true, isActive: true } },
+      contracts: {
+        include: { contract: { select: { status: true, startDate: true, room: { select: { building: { select: { propertyId: true } } } } } } },
+      },
+    },
+  });
+  if (!tenant) return { ok: false, error: TENANT_DENY };
+  // รหัสอย่างเดียวไม่พอ ต้องคู่กับเบอร์ที่อยู่ในสัญญา เผื่อรหัสหลุดไปอยู่ในมือคนอื่น
+  if (normalizePhone(tenant.phone) !== phone) return { ok: false, error: TENANT_DENY };
+
+  const links = [...tenant.contracts].sort(
+    (a, b) =>
+      (a.contract.status === "ACTIVE" ? 0 : 1) - (b.contract.status === "ACTIVE" ? 0 : 1) ||
+      b.contract.startDate.getTime() - a.contract.startDate.getTime(),
+  );
+  const propertyId = links[0]?.contract.room.building.propertyId;
+  if (!propertyId) return { ok: false, error: "รหัสนี้ยังไม่ได้ผูกกับห้องไหน ติดต่อสำนักงานหอพัก" };
+  if (tenant.user && !tenant.user.isActive) return { ok: false, error: "บัญชีนี้ถูกปิดใช้งาน ติดต่อสำนักงานหอพัก" };
+
+  return { ok: true, tenant: { id: tenant.id, fullName: tenant.fullName, userId: tenant.user?.id ?? null }, propertyId };
+}
+
+/**
+ * สร้างบัญชีผู้ใช้ของผู้เช่าถ้ายังไม่มี แล้วคืน userId
+ * ส่ง lineUserId มาด้วยตอนผูก LINE ครั้งแรก · ย้ายหอแล้วก็ใช้บัญชีเดิม แค่ย้าย propertyId ตาม
+ */
+export async function ensureTenantUser(tenant: ResolvedTenant, propertyId: string, lineUserId?: string) {
+  if (!tenant.userId) {
+    const user = await db.user.create({
+      data: { role: "TENANT", name: tenant.fullName, propertyId, isActive: true, ...(lineUserId ? { lineUserId } : {}) },
+    });
+    await db.tenant.update({ where: { id: tenant.id }, data: { userId: user.id } });
+    return user.id;
+  }
+  await db.user.update({
+    where: { id: tenant.userId },
+    data: { propertyId, name: tenant.fullName, ...(lineUserId ? { lineUserId } : {}) },
+  });
+  return tenant.userId;
+}

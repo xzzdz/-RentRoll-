@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EditRoomDialog } from "./EditRoomDialog";
+import { EditTenantDialog } from "./EditTenantDialog";
+import { EditContractDialog } from "./EditContractDialog";
 import { MoveOutDialog } from "./MoveOutDialog";
 import { TenantAccessCard } from "./TenantAccessCard";
 import { setRoomStatus } from "./actions";
@@ -45,6 +48,13 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
   });
   if (!room) notFound();
 
+  // ประเภทห้องทั้งหมดของหอ — ใช้เป็นตัวเลือกตอนแก้ประเภทห้อง
+  const roomTypes = await db.roomType.findMany({
+    where: { propertyId },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, baseRent: true },
+  });
+
   const active = room.contracts.find((c) => c.status === "ACTIVE");
   const invoices = await db.invoice.findMany({
     where: { contract: { roomId: room.id }, status: { not: "VOID" } },
@@ -58,6 +68,8 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
     take: 6,
     include: { assignedTo: { select: { name: true } } },
   });
+  // บิลที่ออกไปแล้วเป็นตัวตัดสินว่าจะให้แก้วันเริ่มสัญญาได้ไหม
+  const issuedCount = active ? await db.invoice.count({ where: { contractId: active.id, status: { notIn: ["DRAFT", "VOID"] } } }) : 0;
   const today = bangkokToday().toISOString().slice(0, 10);
   const water = room.meters.find((m) => m.utility === "WATER");
   const electric = room.meters.find((m) => m.utility === "ELECTRIC");
@@ -73,6 +85,8 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
           <span className="inline-flex flex-wrap items-center gap-2">
             <StatusBadge map={ROOM_STATUS[room.status]} /> {room.roomType.name} · ชั้น {room.floor} · ค่าเช่าตั้งต้น{" "}
             {money((room.rentOverride ?? room.roomType.baseRent).toNumber(), 0)} บาท
+            {room.rentOverride != null && <span className="text-subtle">(ราคาพิเศษเฉพาะห้อง)</span>}
+            {room.note && <span className="text-subtle">· {room.note}</span>}
           </span>
         }
       >
@@ -81,6 +95,15 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
             <Wrench /> แจ้งซ่อม
           </Link>
         </Button>
+        <EditRoomDialog
+          roomId={room.id}
+          roomNumber={room.number}
+          roomTypes={roomTypes.map((t) => ({ id: t.id, name: t.name, baseRent: t.baseRent.toNumber() }))}
+          currentTypeId={room.roomTypeId}
+          rentOverride={room.rentOverride?.toNumber() ?? null}
+          note={room.note}
+          occupied={!!active}
+        />
         {active ? (
           <MoveOutDialog
             contractId={active.id}
@@ -120,8 +143,18 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
           <CardHeader className="border-b">
             <CardTitle>{active ? "ผู้เช่าและสัญญาปัจจุบัน" : "ยังไม่มีผู้เช่า"}</CardTitle>
             {active && (
-              <CardAction>
+              <CardAction className="flex flex-wrap items-center gap-2">
                 <StatusBadge map={CONTRACT_STATUS[active.status]} />
+                <EditContractDialog
+                  contractId={active.id}
+                  contractNo={active.contractNo}
+                  monthlyRent={active.monthlyRent.toNumber()}
+                  depositAmount={active.depositAmount.toNumber()}
+                  startDate={active.startDate.toISOString().slice(0, 10)}
+                  endDate={active.endDate ? active.endDate.toISOString().slice(0, 10) : null}
+                  note={active.note}
+                  issuedCount={issuedCount}
+                />
               </CardAction>
             )}
           </CardHeader>
@@ -132,7 +165,21 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
                 <dl>
                   {active.tenants.map((t) => (
                     <Row key={t.tenantId} label={t.isPrimary ? "ผู้เช่าหลัก" : "ผู้อยู่ร่วม"}>
-                      <b>{t.tenant.fullName}</b>
+                      <span className="flex flex-wrap items-center gap-x-1.5">
+                        <b>{t.tenant.fullName}</b>
+                        <EditTenantDialog
+                          back={`/rooms/${room.id}`}
+                          tenant={{
+                            id: t.tenantId,
+                            fullName: t.tenant.fullName,
+                            phone: t.tenant.phone,
+                            idCardMasked: maskIdCard(t.tenant.idCardNo),
+                            address: t.tenant.address,
+                            emergencyName: t.tenant.emergencyName,
+                            emergencyPhone: t.tenant.emergencyPhone,
+                          }}
+                        />
+                      </span>
                       <div className="num text-muted-foreground">{t.tenant.phone}</div>
                     </Row>
                   ))}

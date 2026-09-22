@@ -2,24 +2,28 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, Printer, Send, TimerReset } from "lucide-react";
 import { getInvoiceDoc } from "@/lib/invoice-doc";
+import { currentPropertyId } from "@/lib/auth";
 import { PAYABLE } from "@/lib/invoice";
 import { bangkokToday } from "@/lib/period";
 import { money, thDate, thPeriod } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { PageHead } from "@/components/PageHead";
 import { SubmitButton } from "@/components/SubmitButton";
 import { InvoiceDocument } from "@/components/InvoiceDocument";
 import { INVOICE_STATUS, StatusBadge } from "@/components/StatusBadge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { issueOneAction, lateFeeAction } from "../actions";
 import { PaymentDialog } from "./PaymentDialog";
 import { VoidDialog } from "./VoidDialog";
+import { VoidPaymentDialog } from "./VoidPaymentDialog";
 
 const METHOD_TH = { CASH: "เงินสด", TRANSFER: "โอนเงิน", PROMPTPAY: "PromptPay" } as const;
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const doc = await getInvoiceDoc(id);
+  const doc = await getInvoiceDoc(id, await currentPropertyId());
   if (!doc) notFound();
 
   const today = bangkokToday();
@@ -99,7 +103,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                   <Printer /> พิมพ์ / บันทึก PDF
                 </Link>
               </Button>
-              {doc.payments.length === 0 && doc.status !== "VOID" && <VoidDialog invoiceId={doc.id} isDraft={doc.status === "DRAFT"} />}
+              {doc.payments.every((p) => p.status !== "CONFIRMED") && doc.status !== "VOID" && <VoidDialog invoiceId={doc.id} isDraft={doc.status === "DRAFT"} />}
             </CardContent>
           </Card>
 
@@ -109,24 +113,31 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </CardHeader>
             <CardContent className="grid gap-3 text-sm">
               {doc.payments.length === 0 && <p className="text-muted-foreground">ยังไม่มีการชำระ</p>}
-              {doc.payments.map((p) => (
-                <div key={p.id} className="grid gap-0.5 border-t pt-2 first:border-0 first:pt-0">
-                  <div className="flex justify-between">
-                    <b className="num">{money(p.amount)}</b>
-                    <span className="text-muted-foreground">{METHOD_TH[p.method]}</span>
+              {doc.payments.map((p) => {
+                // รายการที่ยกเลิกแล้วยังต้องเห็นอยู่ เพื่อให้ตรวจย้อนได้ว่าเคยรับเงินแล้วปลดออกเมื่อไหร่
+                const voided = p.status !== "CONFIRMED";
+                return (
+                  <div key={p.id} className={cn("grid gap-0.5 border-t pt-2 first:border-0 first:pt-0", voided && "opacity-60")}>
+                    <div className="flex items-center justify-between gap-2">
+                      <b className={cn("num", voided && "line-through")}>{money(p.amount)}</b>
+                      {voided ? <Badge variant="bad">ยกเลิกแล้ว</Badge> : <span className="text-muted-foreground">{METHOD_TH[p.method]}</span>}
+                    </div>
+                    <div className="text-subtle text-xs">
+                      {thDate(p.paidAt)}
+                      {p.recordedBy ? ` · บันทึกโดย ${p.recordedBy}` : ""}
+                      {p.note ? ` · ${p.note}` : ""}
+                    </div>
+                    {p.receipt && (
+                      <Link href={`/print/receipt/${p.receipt.id}`} target="_blank" className="text-primary num text-xs hover:underline">
+                        ใบเสร็จ {p.receipt.receiptNo}
+                      </Link>
+                    )}
+                    {!voided && doc.status !== "VOID" && (
+                      <VoidPaymentDialog invoiceId={doc.id} paymentId={p.id} amount={p.amount} receiptNo={p.receipt?.receiptNo ?? null} />
+                    )}
                   </div>
-                  <div className="text-subtle text-xs">
-                    {thDate(p.paidAt)}
-                    {p.recordedBy ? ` · บันทึกโดย ${p.recordedBy}` : ""}
-                    {p.note ? ` · ${p.note}` : ""}
-                  </div>
-                  {p.receipt && (
-                    <Link href={`/print/receipt/${p.receipt.id}`} target="_blank" className="text-primary num text-xs hover:underline">
-                      ใบเสร็จ {p.receipt.receiptNo}
-                    </Link>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </div>

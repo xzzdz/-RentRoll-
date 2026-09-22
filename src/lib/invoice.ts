@@ -340,3 +340,43 @@ export async function voidInvoice(invoiceId: string, reason: string, userId: str
   });
   return inv.status === "DRAFT" ? "deleted" : "voided";
 }
+
+/**
+ * ยกเลิกการรับชำระที่บันทึกผิด — ใบเสร็จถูกประทับว่ายกเลิก ไม่ได้ลบทิ้ง
+ * เก็บแถวไว้เสมอเพราะเลขที่ใบเสร็จรันต่อเนื่อง ถ้าลบจะมีเลขหาย ตรวจบัญชีไม่ผ่าน
+ * ยอดชำระของบิลคำนวณใหม่จากรายการที่ยังยืนยันอยู่ ไม่ใช่ลบออกจากยอดเดิม
+ * (ลบออกตรง ๆ จะเพี้ยนถ้ามีการแก้ยอดอื่นคั่นกลาง)
+ */
+export async function voidPayment(paymentId: string, reason: string, userId: string) {
+  return db.$transaction(async (tx) => {
+    const p = await tx.payment.findUnique({ where: { id: paymentId }, include: { invoice: true, receipt: true } });
+    if (!p) throw new BillingError("ไม่พบรายการรับชำระ");
+    if (p.status !== "CONFIRMED") throw new BillingError("รายการนี้ถูกยกเลิกไปแล้ว");
+    if (p.invoice.status === "VOID") throw new BillingError("บิลใบนี้ถูกยกเลิกไปแล้ว");
+
+    await tx.payment.update({ where: { id: p.id }, data: { status: "REJECTED" } });
+    if (p.receipt) {
+      await tx.receipt.update({ where: { id: p.receipt.id }, data: { voidedAt: new Date(), voidReason: reason || null } });
+    }
+
+    const agg = await tx.payment.aggregate({ where: { invoiceId: p.invoiceId, status: "CONFIRMED" }, _sum: { amount: true } });
+    const paid = round2(agg._sum.amount?.toNumber() ?? 0);
+    const total = p.invoice.total.toNumber();
+    const overdue = !!p.invoice.dueDate && p.invoice.dueDate < bangkokToday();
+    // กติกาเดียวกับตอนรับเงิน จะได้ไม่มีสถานะที่เกิดได้ทางเดียว
+    const status: InvoiceStatus = paid >= total ? "PAID" : overdue ? "OVERDUE" : paid > 0 ? "PARTIAL" : "ISSUED";
+    await tx.invoice.update({ where: { id: p.invoiceId }, data: { paidAmount: paid, status } });
+
+    await tx.auditLog.create({
+      data: {
+        userId,
+        entity: "Payment",
+        entityId: p.id,
+        action: "VOID",
+        before: { amount: p.amount.toNumber(), receiptNo: p.receipt?.receiptNo ?? null, invoicePaid: p.invoice.paidAmount.toNumber() },
+        after: { reason, invoicePaid: paid, invoiceStatus: status },
+      },
+    });
+    return { receiptNo: p.receipt?.receiptNo ?? null, paid, status };
+  });
+}

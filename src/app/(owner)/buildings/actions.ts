@@ -78,7 +78,7 @@ export async function generateRooms(f: FormData) {
   await requireRole("OWNER");
   const buildingId = text(f, "buildingId");
   const back = `/buildings/${buildingId}`;
-  const { building } = await assertBuildingInScope(buildingId);
+  const { propertyId, building } = await assertBuildingInScope(buildingId);
 
   const from = int(f, "floorFrom", 1);
   const to = int(f, "floorTo", 1);
@@ -90,7 +90,9 @@ export async function generateRooms(f: FormData) {
 
   if (from < 1 || to < from || to > building.floors) redirect(withFlash(back, "err", `ชั้นต้องอยู่ระหว่าง 1–${building.floors}`));
   if (perFloor < 1 || perFloor > 60) redirect(withFlash(back, "err", "จำนวนห้องต่อชั้นต้องอยู่ระหว่าง 1–60"));
-  if (!(await db.roomType.findUnique({ where: { id: roomTypeId } }))) redirect(withFlash(back, "err", "เลือกประเภทห้อง"));
+  // ต้องเป็นประเภทห้องของหอตัวเองเท่านั้น ไม่งั้นยิง id ของหออื่นมาผูกกับห้องที่สร้างได้
+  if (!(await db.roomType.findFirst({ where: { id: roomTypeId, propertyId }, select: { id: true } })))
+    redirect(withFlash(back, "err", "เลือกประเภทห้อง"));
 
   const existing = new Set((await db.room.findMany({ where: { buildingId }, select: { number: true } })).map((r) => r.number));
   const rooms: { number: string; floor: number }[] = [];

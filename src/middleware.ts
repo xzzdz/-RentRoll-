@@ -1,11 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@/lib/session-token";
 
-const OWNER_PATHS = ["/dashboard", "/welcome", "/rooms", "/tenants", "/contracts", "/meters", "/billing", "/expenses", "/reports", "/announcements", "/maintenance", "/settings", "/print"];
+const OWNER_PATHS = ["/dashboard", "/welcome", "/rooms", "/buildings", "/room-types", "/tenants", "/contracts", "/parcels", "/meters", "/billing", "/expenses", "/reports", "/announcements", "/maintenance", "/settings", "/print"];
 const TECH_PATHS = ["/tech"];
-// ฝั่งผู้เช่า — /t/login ต้องเปิดได้โดยไม่ต้องล็อกอิน ไม่งั้นเข้าระบบครั้งแรกไม่ได้
+// ฝั่งผู้เช่า — /t/login กับ /t/line ต้องเปิดได้โดยไม่ต้องล็อกอิน ไม่งั้นเข้าระบบครั้งแรกไม่ได้
+// (/t/line คือปลายทางของ LIFF ผู้เช่ายังไม่มี session ตอนเปิดมาจาก LINE)
 const TENANT_ROOT = "/t";
-const TENANT_PUBLIC = ["/t/login"];
+const TENANT_PUBLIC = ["/t/login", "/t/line"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -39,8 +40,11 @@ export const config = {
     "/dashboard/:path*",
     "/welcome/:path*",
     "/rooms/:path*",
+    "/buildings/:path*",
+    "/room-types/:path*",
     "/tenants/:path*",
     "/contracts/:path*",
+    "/parcels/:path*",
     "/meters/:path*",
     "/billing/:path*",
     "/expenses/:path*",

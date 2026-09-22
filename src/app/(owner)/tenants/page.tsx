@@ -3,10 +3,12 @@ import type { ContractStatus, Prisma } from "@prisma/client";
 import { Phone, Plus, Search } from "lucide-react";
 import { db } from "@/lib/db";
 import { currentPropertyId } from "@/lib/auth";
+import { maskIdCard } from "@/lib/crypto";
 import { bangkokToday } from "@/lib/period";
 import { money, thDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { PageHead } from "@/components/PageHead";
+import { EditTenantDialog, type TenantInfo } from "../rooms/[id]/EditTenantDialog";
 import { CONTRACT_STATUS, StatusBadge } from "@/components/StatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,7 @@ type Row = {
   status: ContractStatus;
   tenant: string;
   phone: string | null;
+  primary: TenantInfo | null;
   others: number;
   rent: number;
   owed: number;
@@ -85,6 +88,18 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
       status: c.status,
       tenant: primary?.fullName ?? "-",
       phone: primary?.phone ?? null,
+      primary: primary
+        ? {
+            id: primary.id,
+            fullName: primary.fullName,
+            phone: primary.phone,
+            // ถอดรหัสฝั่งเซิร์ฟเวอร์แล้วส่งไปแค่ 4 ตัวท้าย เลขเต็มห้ามหลุดไปถึง client
+            idCardMasked: maskIdCard(primary.idCardNo),
+            address: primary.address,
+            emergencyName: primary.emergencyName,
+            emergencyPhone: primary.emergencyPhone,
+          }
+        : null,
       others: Math.max(0, c.tenants.length - 1),
       rent: c.monthlyRent.toNumber(),
       owed: c.invoices.reduce((s, i) => s + i.total.toNumber() - i.paidAmount.toNumber(), 0),
@@ -154,6 +169,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
               <div className="flex flex-wrap items-center gap-x-2 text-[13px]">
                 <span>{r.tenant}</span>
                 {r.others > 0 && <span className="text-subtle text-[11px]">+{r.others}</span>}
+                {r.primary && <EditTenantDialog tenant={r.primary} back="/tenants" label="" />}
                 {r.phone && (
                   <a href={`tel:${r.phone}`} className="text-primary num inline-flex items-center gap-1 text-[12.5px]">
                     <Phone className="size-3" aria-hidden /> {r.phone}
@@ -201,8 +217,11 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {r.tenant}
-                    {r.others > 0 && <span className="text-subtle text-xs"> +{r.others}</span>}
+                    <span className="inline-flex items-center gap-1">
+                      {r.tenant}
+                      {r.others > 0 && <span className="text-subtle text-xs">+{r.others}</span>}
+                      {r.primary && <EditTenantDialog tenant={r.primary} back="/tenants" label="" />}
+                    </span>
                   </TableCell>
                   <TableCell className="num">{r.phone ?? "-"}</TableCell>
                   <TableCell className="num text-muted-foreground">{r.contractNo}</TableCell>
