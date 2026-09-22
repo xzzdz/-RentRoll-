@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -115,30 +115,21 @@ export function FeeRow({ fee }: { fee: FeeView }) {
 
 function DeleteFeeDialog({ fee }: { fee: FeeView }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
+    <ConfirmDelete
+      action={deleteFee}
+      fields={{ id: fee.id }}
+      title={<>ลบ &ldquo;{fee.name}&rdquo;?</>}
+      description={
+        fee.usedBy > 0
+          ? `มี ${fee.usedBy} สัญญาใช้รายการนี้อยู่ ระบบจะปิดใช้งานแทนการลบ เพื่อไม่ให้บิลเก่าเสียหาย — สัญญาใหม่จะไม่เห็นรายการนี้อีก`
+          : "รายการนี้ยังไม่เคยถูกใช้ในสัญญาไหน ลบออกได้เลย"
+      }
+      confirmText={fee.usedBy > 0 ? "ปิดใช้งานรายการนี้" : "ลบรายการ"}
+      trigger={
         <Button type="button" variant="ghost" size="sm" className="text-destructive mt-2">
           <Trash2 /> ลบรายการนี้
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>ลบ &ldquo;{fee.name}&rdquo;?</DialogTitle>
-          <DialogDescription>
-            {fee.usedBy > 0
-              ? `มี ${fee.usedBy} สัญญาใช้รายการนี้อยู่ ระบบจะปิดใช้งานแทนการลบ เพื่อไม่ให้บิลเก่าเสียหาย — สัญญาใหม่จะไม่เห็นรายการนี้อีก`
-              : "รายการนี้ยังไม่เคยถูกใช้ในสัญญาไหน ลบออกได้เลย"}
-          </DialogDescription>
-        </DialogHeader>
-        <form action={deleteFee}>
-          <input type="hidden" name="id" value={fee.id} />
-          <DialogFooter>
-            <SubmitButton variant="destructive" pendingText="กำลังลบ…">
-              {fee.usedBy > 0 ? "ปิดใช้งานรายการนี้" : "ลบรายการ"}
-            </SubmitButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      }
+    />
   );
 }

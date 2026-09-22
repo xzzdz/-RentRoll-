@@ -4,12 +4,12 @@ import { Banknote, PencilRuler, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { currentPropertyId } from "@/lib/auth";
 import { money } from "@/lib/format";
-import { CELL_META, parsePlan, rowsOf } from "@/lib/floorplan";
+import { CELL_META, corridorLinks, parsePlan, wallClass, wallsOf } from "@/lib/floorplan";
 import { ROOM_TILE as TILE, ROOM_TILE_OVERDUE as TILE_OVERDUE, roomTileClass } from "@/lib/room-style";
 import { cn } from "@/lib/utils";
 import { PageHead } from "@/components/PageHead";
 import { BuildingTabs } from "@/components/BuildingTabs";
-import { CellContent, PlanLegend } from "@/components/FloorPlanCell";
+import { CellContent, CorridorPath, PlanLegend } from "@/components/FloorPlanCell";
 import { ROOM_STATUS } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 
@@ -141,29 +141,30 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
                 </div>
 
                 {cells && plan ? (
-                  /* ผังที่จัดไว้เอง — ห้องเป็นสีสด พื้นที่ส่วนกลางเป็นสีเย็นจาง + ไอคอน */
-                  <div className="overflow-x-auto">
-                    <div
-                      className="grid gap-1"
-                      style={{
-                        gridTemplateColumns: `repeat(${plan.cols}, minmax(48px, 1fr))`,
-                        maxWidth: `${plan.cols * 92}px`,
-                        gridTemplateRows: `repeat(${rowsOf(cells, plan.cols)}, auto)`,
-                      }}
-                    >
-                      {cells.map((c, i) => {
-                        const room = c.t === "ROOM" && c.roomId ? byId.get(c.roomId) : null;
-                        if (room) return <Tile key={i} room={room} square />;
-                        return (
-                          <div
-                            key={i}
-                            title={c.t === "EMPTY" ? undefined : CELL_META[c.t].label}
-                            className={cn("grid aspect-square place-items-center rounded-md border", CELL_META[c.t].className)}
-                          >
-                            <CellContent type={c.t} compact />
-                          </div>
-                        );
-                      })}
+                  /* ผังที่จัดไว้เอง — วาดแบบไม่มีช่องไฟ แล้วลบเส้นระหว่างช่องชนิดเดียวกันทิ้ง
+                     ทางเดินที่ต่อกันจึงกลายเป็นทางเดินเส้นเดียว ไม่ใช่ช่องสี่เหลี่ยมหลุด ๆ เรียงกัน */
+                  <div className="overflow-x-auto pb-1">
+                    <div className="bg-background shadow-soft rounded-xl border p-2.5" style={{ maxWidth: plan.cols * 76 + 20 }}>
+                      <div className="grid" style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(48px, 1fr))` }}>
+                        {cells.map((c, i) => {
+                          if (c.t === "EMPTY") return <div key={i} className="aspect-square" aria-hidden />;
+
+                          const room = c.roomId ? byId.get(c.roomId) : null;
+                          const walls = wallClass(wallsOf(cells, plan.cols, i));
+                          if (room) return <Tile key={i} room={room} walls={walls} />;
+
+                          return (
+                            <div
+                              key={i}
+                              title={CELL_META[c.t].label}
+                              className={cn("relative grid aspect-square place-items-center", CELL_META[c.t].className, walls)}
+                            >
+                              <CorridorPath links={corridorLinks(cells, plan.cols, i)} />
+                              <CellContent type={c.t} compact />
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -198,24 +199,27 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
   );
 }
 
-function Tile({ room, square }: { room: RoomTile; square?: boolean }) {
+function Tile({ room, walls }: { room: RoomTile; walls?: string }) {
   const flags = [room.overdue && "ค้างชำระ", room.repair && "มีงานซ่อม"].filter(Boolean).join(" · ");
+  const inPlan = walls != null;
   return (
     <Link
       href={`/rooms/${room.id}`}
       title={`${room.number} · ${room.typeName} · ${money(room.rent, 0)} บาท${room.tenant ? ` · ${room.tenant}` : ""}${flags ? ` · ${flags}` : ""}`}
       className={cn(
-        "hover:ring-primary relative rounded-lg border px-1.5 py-1 transition-shadow hover:ring-2",
-        square ? "grid aspect-square place-content-center text-center" : "min-h-[56px]",
+        "hover:ring-primary relative transition-shadow hover:z-10 hover:ring-2",
+        // ในผังห้องเป็นช่องติดกันแบบมีผนังคั่น มุมจึงต้องเหลี่ยม · นอกผังเป็นการ์ดเรียงกัน
+        inPlan ? "grid aspect-square place-content-center px-1 text-center" : "min-h-[56px] rounded-lg border px-1.5 py-1",
         roomTileClass(room.status, room.overdue),
+        walls,
       )}
     >
-      <span className={cn("absolute flex gap-0.5", square ? "top-1 right-1" : "top-1.5 right-1.5")}>
+      <span className={cn("absolute flex gap-0.5", inPlan ? "top-1 right-1" : "top-1.5 right-1.5")}>
         {room.overdue && <Banknote className="size-3.5" aria-label="ค้างชำระ" />}
         {room.repair && <Wrench className="text-room-hold-fg size-3.5" aria-label="มีงานซ่อม" />}
       </span>
       <span className="num block text-[13px] font-bold">{room.number}</span>
-      {!square && <span className="block truncate text-[11px] opacity-80">{room.tenant ? room.tenant.split(" ")[0] : ROOM_STATUS[room.status][1]}</span>}
+      {!inPlan && <span className="block truncate text-[11px] opacity-80">{room.tenant ? room.tenant.split(" ")[0] : ROOM_STATUS[room.status][1]}</span>}
     </Link>
   );
 }

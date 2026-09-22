@@ -9,7 +9,7 @@ import { ROOM_STATUS } from "@/components/StatusBadge";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { deleteRoom } from "../actions";
 
 export type RoomView = { id: string; number: string; floor: number; status: RoomStatus; typeName: string; locked: boolean };
@@ -66,26 +66,17 @@ export function RoomList({ rooms, floors }: { rooms: RoomView[]; floors: number[
 
 function DeleteRoomDialog({ room }: { room: RoomView }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
+    <ConfirmDelete
+      action={deleteRoom}
+      fields={{ id: room.id }}
+      title={`ลบห้อง ${room.number}?`}
+      description="ห้องนี้ยังไม่เคยมีสัญญาหรืองานซ่อม ลบแล้วมิเตอร์ของห้องจะถูกลบไปด้วย"
+      confirmText="ลบห้อง"
+      trigger={
         <Button variant="ghost" size="sm" className="hover:text-destructive size-7 shrink-0 p-0 opacity-60" aria-label={`ลบห้อง ${room.number}`}>
           <Trash2 className="size-3.5" />
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>ลบห้อง {room.number}?</DialogTitle>
-          <DialogDescription>ห้องนี้ยังไม่เคยมีสัญญาหรืองานซ่อม ลบแล้วมิเตอร์ของห้องจะถูกลบไปด้วย</DialogDescription>
-        </DialogHeader>
-        <form action={deleteRoom}>
-          <input type="hidden" name="id" value={room.id} />
-          <DialogFooter>
-            <SubmitButton variant="destructive" pendingText="กำลังลบ…">
-              ลบห้อง
-            </SubmitButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      }
+    />
   );
 }

@@ -9,28 +9,49 @@ import {
   MIN_COLS,
   PAINT_TOOLS,
   autoPlaceRooms,
+  corridorLinks,
   emptyCells,
   resizeCols,
   rowsOf,
+  wallClass,
+  wallsOf,
   type FloorPlan,
   type PlanCell,
   type PlanCellType,
 } from "@/lib/floorplan";
 import { ROOM_TILE, roomTileClass } from "@/lib/room-style";
 import { cn } from "@/lib/utils";
-import { CellContent, CellIcon, PlanLegend } from "@/components/FloorPlanCell";
+import { CellContent, CellIcon, CorridorPath, PlanLegend } from "@/components/FloorPlanCell";
 import { ROOM_STATUS } from "@/components/StatusBadge";
 import { SubmitButton } from "@/components/SubmitButton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { saveFloorPlan } from "../actions";
 import type { RoomView } from "./RoomList";
 
 type Tool = { kind: "paint"; t: PlanCellType } | { kind: "room"; roomId: string };
 
 const MAX_HISTORY = 60;
+
+/** ตัวอย่างสีของสิ่งที่กำลังจะวาง — ปุ่มเป็นปุ่มมาตรฐาน สีผังอยู่ในตัวอย่าง ไม่ใช่ที่ตัวปุ่ม */
+function Swatch({ className, children }: { className: string; children?: React.ReactNode }) {
+  return <span className={cn("grid size-4 shrink-0 place-items-center rounded-[3px] border", className)}>{children}</span>;
+}
 
 export function FloorPlanEditor({
   buildingId,
@@ -62,12 +83,14 @@ export function FloorPlanEditor({
   const dirty = JSON.stringify(plan) !== JSON.stringify(initialPlan);
 
   /** ทุกการแก้ผังต้องผ่านตรงนี้ เพื่อให้ย้อนกลับได้เสมอ */
-  const commit = useCallback((next: FloorPlan) => {
-    setPast((p) => [...p.slice(-(MAX_HISTORY - 1)), plan]);
-    setFuture([]);
-    setPlan(next);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan]);
+  const commit = useCallback(
+    (next: FloorPlan) => {
+      setPast((p) => [...p.slice(-(MAX_HISTORY - 1)), plan]);
+      setFuture([]);
+      setPlan(next);
+    },
+    [plan],
+  );
 
   const setCells = useCallback((next: PlanCell[]) => commit({ ...plan, floors: { ...plan.floors, [key]: next } }), [commit, plan, key]);
 
@@ -100,7 +123,7 @@ export function FloorPlanEditor({
   function paint(index: number) {
     const next = [...cells];
     if (tool.kind === "paint") {
-      if (next[index].t === tool.t && tool.t !== "ROOM") return; // กดซ้ำช่องเดิม ไม่ต้องเก็บประวัติเพิ่ม
+      if (next[index].t === tool.t) return; // กดซ้ำช่องเดิม ไม่ต้องเก็บประวัติเพิ่ม
       next[index] = { t: tool.t };
     } else {
       // ห้องหนึ่งอยู่ได้ที่เดียว — ถ้าเคยวางไว้แล้วให้ย้ายมาช่องใหม่
@@ -146,254 +169,277 @@ export function FloorPlanEditor({
 
   const otherFloors = floors.filter((f) => f !== floor && (plan.floors[String(f)]?.some((c) => c.t !== "EMPTY") ?? false));
   const isBlank = cells.every((c) => c.t === "EMPTY");
+  const toolValue = tool.kind === "paint" ? `t:${tool.t}` : `r:${tool.roomId}`;
 
   return (
-    <div className="grid gap-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>ผังชั้น</CardTitle>
-          <CardDescription>
-            เลือกเครื่องมือหรือเลือกห้อง แล้วแตะช่องในตาราง · บนคอมพิวเตอร์ลากค้างเพื่อระบายยาว ๆ และกด Ctrl+Z เพื่อย้อนกลับได้
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          {/* เลือกชั้น */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="eyebrow mr-1">ชั้น</span>
-            {floors.map((f) => {
-              const drawn = plan.floors[String(f)]?.some((c) => c.t !== "EMPTY") ?? false;
-              return (
-                <button
-                  key={f}
-                  type="button"
-                  onClick={() => setFloor(f)}
-                  aria-current={f === floor ? "true" : undefined}
-                  className={cn(
-                    "num relative min-h-9 min-w-9 rounded-lg border px-2.5 text-[13px] font-semibold",
-                    f === floor ? "bg-primary text-primary-foreground border-transparent" : "bg-card hover:bg-muted",
-                  )}
-                >
-                  {f}
-                  {drawn && f !== floor && <i className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" aria-hidden />}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* แถบเครื่องมือหลัก */}
-          <div className="flex flex-wrap items-center gap-1.5 border-y py-2">
-            <Button type="button" variant="outline" size="sm" onClick={undo} disabled={past.length === 0} aria-label="ย้อนกลับ" title="ย้อนกลับ (Ctrl+Z)">
-              <Undo2 /> ย้อนกลับ
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={redo} disabled={future.length === 0} aria-label="ทำซ้ำ" title="ทำซ้ำ (Ctrl+Shift+Z)">
-              <Redo2 />
-            </Button>
-
-            <span className="bg-border mx-1 h-6 w-px" aria-hidden />
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCells(autoPlaceRooms(cells, unplaced.map((r) => r.id)))}
-              disabled={unplaced.length === 0 || !cells.some((c) => c.t === "EMPTY")}
-              title="วางห้องที่เหลือลงช่องว่างตามลำดับ"
-            >
-              <Wand2 /> วางห้องที่เหลือ
-            </Button>
-
-            {otherFloors.length > 0 && (
-              <Select key={copyKey} onValueChange={copyFrom}>
-                <SelectTrigger size="sm" className="w-[150px]" aria-label="ก๊อปผังจากชั้นอื่น">
-                  <span className="inline-flex items-center gap-1.5">
-                    <Copy className="size-3.5" aria-hidden /> <SelectValue placeholder="ก๊อปจากชั้น…" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {otherFloors.map((f) => (
-                    <SelectItem key={f} value={String(f)}>
-                      ชั้น {f}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            <ClearFloorDialog floor={floor} disabled={isBlank} onConfirm={() => setCells(emptyCells(cells.length))} />
-          </div>
-
-          {/* เครื่องมือระบาย */}
-          <div className="grid gap-1.5">
-            <span className="eyebrow">พื้นที่ส่วนกลาง</span>
-            <div className="flex flex-wrap gap-1.5">
-              {PAINT_TOOLS.map((t) => {
-                const on = tool.kind === "paint" && tool.t === t;
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setTool({ kind: "paint", t })}
-                    aria-pressed={on}
-                    className={cn(
-                      "inline-flex min-h-10 items-center gap-1.5 rounded-lg border px-3 text-[13px] font-medium",
-                      on ? "border-primary ring-primary/30 ring-2" : "hover:opacity-80",
-                      t === "EMPTY" ? "border-dashed" : CELL_META[t].className,
-                    )}
-                  >
-                    {t === "EMPTY" ? <Eraser className="size-3.5" aria-hidden /> : <CellIcon name={CELL_META[t].icon} className="size-3.5" />}
-                    {t === "EMPTY" ? "ยางลบ" : CELL_META[t].label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ห้องที่ยังไม่ได้วาง */}
-          <div className="grid gap-1.5">
-            <span className="eyebrow">
-              ห้องชั้น {floor} ที่ยังไม่ได้วาง ({unplaced.length}/{floorRooms.length})
-            </span>
-            {floorRooms.length === 0 ? (
-              <p className="text-subtle text-[12.5px]">ชั้นนี้ยังไม่มีห้อง — สร้างห้องในแท็บ &ldquo;ห้อง&rdquo; ก่อน</p>
-            ) : unplaced.length === 0 ? (
-              <p className="text-ok text-[12.5px]">วางครบทุกห้องแล้ว</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {unplaced.map((r) => {
-                  const on = tool.kind === "room" && tool.roomId === r.id;
+    <TooltipProvider>
+      <div className="grid gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>ผังชั้น</CardTitle>
+            <CardDescription>
+              เลือกเครื่องมือหรือเลือกห้อง แล้วแตะช่องในตาราง · บนคอมพิวเตอร์ลากค้างเพื่อระบายยาว ๆ และกด Ctrl+Z เพื่อย้อนกลับได้
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3">
+            {/* เลือกชั้น */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="eyebrow">ชั้น</span>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                value={String(floor)}
+                onValueChange={(v) => v && setFloor(Number(v))}
+                aria-label="เลือกชั้นที่จะจัดผัง"
+              >
+                {floors.map((f) => {
+                  const drawn = plan.floors[String(f)]?.some((c) => c.t !== "EMPTY") ?? false;
                   return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => setTool({ kind: "room", roomId: r.id })}
-                      aria-pressed={on}
-                      className={cn(
-                        "num min-h-9 rounded-lg border px-2.5 text-[13px] font-semibold",
-                        ROOM_TILE[r.status],
-                        on && "ring-primary border-primary ring-2",
-                      )}
-                    >
-                      {r.number}
-                    </button>
+                    <ToggleGroupItem key={f} value={String(f)} className="num relative font-semibold">
+                      {f}
+                      {drawn && f !== floor && <i className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" aria-hidden />}
+                    </ToggleGroupItem>
                   );
                 })}
-              </div>
-            )}
-          </div>
+              </ToggleGroup>
+            </div>
 
-          {/* ตาราง */}
-          <div
-            className="bg-muted/40 overflow-x-auto rounded-xl border p-2"
-            onPointerUp={() => (painting.current = false)}
-            onPointerLeave={() => (painting.current = false)}
-          >
-            <div
-              className="mx-auto grid gap-1"
-              style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(42px, 1fr))`, maxWidth: `${plan.cols * 84}px` }}
-            >
-              {cells.map((c, i) => {
-                const room = c.t === "ROOM" && c.roomId ? roomById.get(c.roomId) : null;
-                return (
-                  <button
-                    key={i}
+            {/* แถบเครื่องมือหลัก */}
+            <div className="flex flex-wrap items-center gap-1.5 border-y py-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" onClick={undo} disabled={past.length === 0}>
+                    <Undo2 /> ย้อนกลับ
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>ย้อนกลับ (Ctrl+Z)</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button type="button" variant="outline" size="icon-sm" onClick={redo} disabled={future.length === 0} aria-label="ทำซ้ำ">
+                    <Redo2 />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>ทำซ้ำ (Ctrl+Shift+Z)</TooltipContent>
+              </Tooltip>
+
+              <Separator orientation="vertical" className="mx-1 !h-6" />
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
                     type="button"
-                    onPointerDown={(e) => onPointerDown(e, i)}
-                    onPointerEnter={() => painting.current && paint(i)}
-                    aria-label={`แถว ${Math.floor(i / plan.cols) + 1} ช่อง ${(i % plan.cols) + 1} — ${room?.number ?? CELL_META[c.t].label}`}
-                    className={cn(
-                      "grid aspect-square place-items-center rounded-md border text-[9.5px] leading-tight font-medium select-none",
-                      room ? roomTileClass(room.status) : CELL_META[c.t].className,
-                      "hover:ring-primary/40 hover:ring-2",
-                    )}
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCells(
+                        autoPlaceRooms(
+                          cells,
+                          unplaced.map((r) => r.id),
+                        ),
+                      )
+                    }
+                    disabled={unplaced.length === 0 || !cells.some((c) => c.t === "EMPTY")}
                   >
-                    {room ? <span className="num text-[11px] font-bold">{room.number}</span> : <CellContent type={c.t} compact />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                    <Wand2 /> วางห้องที่เหลือ
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>วางห้องที่ยังไม่ได้วาง ลงช่องว่างตามลำดับ</TooltipContent>
+              </Tooltip>
 
-          {/* คำอธิบายสัญลักษณ์ — ชุดเดียวกับหน้าผังห้อง */}
-          <div className="grid gap-2 border-t pt-3">
-            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px]">
-              <span className="eyebrow">สถานะห้อง</span>
-              {(Object.keys(ROOM_TILE) as (keyof typeof ROOM_TILE)[]).map((s) => (
-                <span key={s} className="text-muted-foreground inline-flex items-center gap-1.5">
-                  <i className={cn("inline-block size-4 rounded border", ROOM_TILE[s])} />
-                  {ROOM_STATUS[s][1]}
+              {otherFloors.length > 0 && (
+                <Select key={copyKey} onValueChange={copyFrom}>
+                  <SelectTrigger size="sm" className="w-[150px]" aria-label="ก๊อปผังจากชั้นอื่น">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Copy className="size-3.5" aria-hidden /> <SelectValue placeholder="ก๊อปจากชั้น…" />
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {otherFloors.map((f) => (
+                      <SelectItem key={f} value={String(f)}>
+                        ชั้น {f}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <ClearFloorDialog floor={floor} disabled={isBlank} onConfirm={() => setCells(emptyCells(cells.length))} />
+            </div>
+
+            {/* สิ่งที่จะวาง — ส่วนกลางกับห้อง อยู่ในกลุ่มเลือกเดียวกัน เพราะเลือกได้ทีละอย่าง */}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={2}
+              value={toolValue}
+              onValueChange={(v) => {
+                if (v.startsWith("t:")) setTool({ kind: "paint", t: v.slice(2) as PlanCellType });
+                else if (v.startsWith("r:")) setTool({ kind: "room", roomId: v.slice(2) });
+              }}
+              className="grid w-full gap-3"
+              aria-label="เลือกสิ่งที่จะวาง"
+            >
+              <div className="grid gap-1.5">
+                <span className="eyebrow">พื้นที่ส่วนกลาง</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {PAINT_TOOLS.map((t) => (
+                    <ToggleGroupItem key={t} value={`t:${t}`} className="gap-2">
+                      {t === "EMPTY" ? (
+                        <Eraser className="text-subtle size-4" aria-hidden />
+                      ) : (
+                        <Swatch className={CELL_META[t].className}>
+                          <CellIcon name={CELL_META[t].icon} className="size-3" />
+                        </Swatch>
+                      )}
+                      {t === "EMPTY" ? "ยางลบ" : CELL_META[t].label}
+                    </ToggleGroupItem>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-1.5">
+                <span className="eyebrow">
+                  ห้องชั้น {floor} ที่ยังไม่ได้วาง ({unplaced.length}/{floorRooms.length})
                 </span>
-              ))}
-            </div>
-            <PlanLegend />
-          </div>
+                {floorRooms.length === 0 ? (
+                  <p className="text-subtle text-[12.5px]">ชั้นนี้ยังไม่มีห้อง — สร้างห้องในแท็บ &ldquo;ห้อง&rdquo; ก่อน</p>
+                ) : unplaced.length === 0 ? (
+                  <p className="text-ok text-[12.5px]">วางครบทุกห้องแล้ว</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {unplaced.map((r) => (
+                      <ToggleGroupItem key={r.id} value={`r:${r.id}`} className="num gap-1.5 font-semibold" aria-label={`วางห้อง ${r.number}`}>
+                        <Swatch className={ROOM_TILE[r.status]} />
+                        {r.number}
+                      </ToggleGroupItem>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </ToggleGroup>
 
-          {/* ขนาดตาราง */}
-          <div className="flex flex-wrap items-center gap-3 border-t pt-3 text-[13px]">
-            <div className="flex items-center gap-1">
-              <Columns3 className="text-subtle size-4" aria-hidden />
-              <span className="text-muted-foreground">คอลัมน์</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => setCols(-1)} disabled={plan.cols <= MIN_COLS} aria-label="ลดคอลัมน์">
-                <Minus />
-              </Button>
-              <b className="num w-5 text-center">{plan.cols}</b>
-              <Button type="button" variant="outline" size="sm" onClick={() => setCols(1)} disabled={plan.cols >= MAX_COLS} aria-label="เพิ่มคอลัมน์">
-                <Plus />
-              </Button>
+            {/* ตาราง — วาดแบบเดียวกับหน้าผังห้องเป๊ะ ๆ จะได้เห็นของจริงระหว่างจัด */}
+            <div
+              className="bg-muted/40 overflow-x-auto rounded-xl border p-3"
+              onPointerUp={() => (painting.current = false)}
+              onPointerLeave={() => (painting.current = false)}
+            >
+              <div className="bg-background shadow-soft mx-auto rounded-lg border p-2" style={{ maxWidth: plan.cols * 68 + 16 }}>
+                <div className="grid" style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(44px, 1fr))` }}>
+                  {cells.map((c, i) => {
+                    const room = c.t === "ROOM" && c.roomId ? roomById.get(c.roomId) : null;
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onPointerDown={(e) => onPointerDown(e, i)}
+                        onPointerEnter={() => painting.current && paint(i)}
+                        aria-label={`แถว ${Math.floor(i / plan.cols) + 1} ช่อง ${(i % plan.cols) + 1} — ${room?.number ?? CELL_META[c.t].label}`}
+                        className={cn(
+                          "relative grid aspect-square place-items-center text-[9.5px] leading-tight font-medium select-none",
+                          "hover:ring-primary/50 hover:z-10 hover:ring-2",
+                          room ? roomTileClass(room.status) : CELL_META[c.t].className,
+                          // ช่องว่างคงเส้นประไว้ทั้งสี่ด้าน จะได้เห็นว่ายังแตะลงได้ ส่วนช่องที่วาดแล้วเหลือแต่ผนังจริง
+                          c.t === "EMPTY" ? "border border-dashed" : wallClass(wallsOf(cells, plan.cols, i)),
+                        )}
+                      >
+                        <CorridorPath links={corridorLinks(cells, plan.cols, i)} />
+                        {room ? <span className="num text-[11px] font-bold">{room.number}</span> : <CellContent type={c.t} compact />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-1">
-              <Rows3 className="text-subtle size-4" aria-hidden />
-              <span className="text-muted-foreground">แถว</span>
-              <Button type="button" variant="outline" size="sm" onClick={() => setRows(-1)} disabled={rows <= 1} aria-label="ลดแถว">
-                <Minus />
-              </Button>
-              <b className="num w-5 text-center">{rows}</b>
-              <Button type="button" variant="outline" size="sm" onClick={() => setRows(1)} disabled={(rows + 1) * plan.cols > MAX_CELLS} aria-label="เพิ่มแถว">
-                <Plus />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      <form action={saveFloorPlan} className="bg-card/80 sticky bottom-20 flex items-center justify-between gap-3 rounded-xl border p-3 backdrop-blur lg:bottom-4">
-        <input type="hidden" name="buildingId" value={buildingId} />
-        <input type="hidden" name="plan" value={JSON.stringify(plan)} />
-        <span className="text-muted-foreground text-[12.5px]">{dirty ? "ยังไม่ได้บันทึก" : "ผังตรงกับที่บันทึกไว้"}</span>
-        <SubmitButton disabled={!dirty} pendingText="กำลังบันทึก…">
-          <Save /> บันทึกผัง
-        </SubmitButton>
-      </form>
-    </div>
+            {/* คำอธิบายสัญลักษณ์ — ชุดเดียวกับหน้าผังห้อง */}
+            <div className="grid gap-2 border-t pt-3">
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px]">
+                <span className="eyebrow">สถานะห้อง</span>
+                {(Object.keys(ROOM_TILE) as (keyof typeof ROOM_TILE)[]).map((s) => (
+                  <span key={s} className="text-muted-foreground inline-flex items-center gap-1.5">
+                    <i className={cn("inline-block size-4 rounded border", ROOM_TILE[s])} />
+                    {ROOM_STATUS[s][1]}
+                  </span>
+                ))}
+              </div>
+              <PlanLegend />
+            </div>
+
+            {/* ขนาดตาราง */}
+            <div className="flex flex-wrap items-center gap-3 border-t pt-3 text-[13px]">
+              <div className="flex items-center gap-1">
+                <Columns3 className="text-subtle size-4" aria-hidden />
+                <span className="text-muted-foreground">คอลัมน์</span>
+                <Button type="button" variant="outline" size="icon-sm" onClick={() => setCols(-1)} disabled={plan.cols <= MIN_COLS} aria-label="ลดคอลัมน์">
+                  <Minus />
+                </Button>
+                <b className="num w-5 text-center">{plan.cols}</b>
+                <Button type="button" variant="outline" size="icon-sm" onClick={() => setCols(1)} disabled={plan.cols >= MAX_COLS} aria-label="เพิ่มคอลัมน์">
+                  <Plus />
+                </Button>
+              </div>
+              <div className="flex items-center gap-1">
+                <Rows3 className="text-subtle size-4" aria-hidden />
+                <span className="text-muted-foreground">แถว</span>
+                <Button type="button" variant="outline" size="icon-sm" onClick={() => setRows(-1)} disabled={rows <= 1} aria-label="ลดแถว">
+                  <Minus />
+                </Button>
+                <b className="num w-5 text-center">{rows}</b>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  onClick={() => setRows(1)}
+                  disabled={(rows + 1) * plan.cols > MAX_CELLS}
+                  aria-label="เพิ่มแถว"
+                >
+                  <Plus />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <form
+          action={saveFloorPlan}
+          className="bg-card/80 sticky bottom-20 flex items-center justify-between gap-3 rounded-xl border p-3 backdrop-blur lg:bottom-4"
+        >
+          <input type="hidden" name="buildingId" value={buildingId} />
+          <input type="hidden" name="plan" value={JSON.stringify(plan)} />
+          <span className="text-muted-foreground text-[12.5px]">{dirty ? "ยังไม่ได้บันทึก" : "ผังตรงกับที่บันทึกไว้"}</span>
+          <SubmitButton disabled={!dirty} pendingText="กำลังบันทึก…">
+            <Save /> บันทึกผัง
+          </SubmitButton>
+        </form>
+      </div>
+    </TooltipProvider>
   );
 }
 
 function ClearFloorDialog({ floor, disabled, onConfirm }: { floor: number; disabled: boolean; onConfirm: () => void }) {
-  const [open, setOpen] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
         <Button type="button" variant="ghost" size="sm" className="text-destructive" disabled={disabled}>
           <Trash2 /> ล้างชั้นนี้
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>ล้างผังชั้น {floor}?</DialogTitle>
-          <DialogDescription>ช่องทั้งหมดในชั้นนี้จะกลับเป็นว่าง ห้องที่วางไว้จะกลับไปอยู่ในรายการรอวาง · กดย้อนกลับได้ถ้าเปลี่ยนใจ</DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={() => {
-              onConfirm();
-              setOpen(false);
-            }}
-          >
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>ล้างผังชั้น {floor}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            ช่องทั้งหมดในชั้นนี้จะกลับเป็นว่าง ห้องที่วางไว้จะกลับไปอยู่ในรายการรอวาง · กดย้อนกลับได้ถ้าเปลี่ยนใจ
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>ไม่ล้าง</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={onConfirm}>
             ล้างชั้นนี้
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

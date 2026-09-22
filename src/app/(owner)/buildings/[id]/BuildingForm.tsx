@@ -5,7 +5,7 @@ import { Field } from "@/components/Field";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Input } from "@/components/ui/input";
 import { deleteBuilding, updateBuilding } from "../actions";
 
@@ -54,27 +54,18 @@ export function BuildingForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Dialog>
-            <DialogTrigger asChild>
+          <ConfirmDelete
+            action={deleteBuilding}
+            fields={{ id: building.id }}
+            title={`ลบ ${building.name}?`}
+            description="ผังชั้นที่จัดไว้จะหายไปด้วย และย้อนกลับไม่ได้"
+            confirmText="ยืนยันลบตึก"
+            trigger={
               <Button variant="outline" className="text-destructive" disabled={roomCount > 0}>
                 <Trash2 /> ลบตึก
               </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>ลบ {building.name}?</DialogTitle>
-                <DialogDescription>ผังชั้นที่จัดไว้จะหายไปด้วย และย้อนกลับไม่ได้</DialogDescription>
-              </DialogHeader>
-              <form action={deleteBuilding}>
-                <input type="hidden" name="id" value={building.id} />
-                <DialogFooter>
-                  <SubmitButton variant="destructive" pendingText="กำลังลบ…">
-                    ยืนยันลบตึก
-                  </SubmitButton>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+            }
+          />
         </CardContent>
       </Card>
     </div>

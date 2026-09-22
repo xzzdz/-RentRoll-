@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -115,27 +115,18 @@ export function AnnouncementRow({ item, buildings }: { item: AnnouncementView; b
         </form>
 
         {/* ฟอร์มลบต้องอยู่นอกฟอร์มแก้ไข — HTML ซ้อน form ไม่ได้ */}
-        <Dialog>
-          <DialogTrigger asChild>
+        <ConfirmDelete
+          action={deleteAnnouncement}
+          fields={{ id: item.id }}
+          title={<>ลบ &ldquo;{item.title}&rdquo;?</>}
+          description={<>ลบแล้วกู้คืนไม่ได้ ถ้าแค่อยากซ่อนจากบอร์ดให้กด &ldquo;เก็บกลับเป็นร่าง&rdquo; แทน</>}
+          confirmText="ลบประกาศ"
+          trigger={
             <Button type="button" variant="ghost" size="sm" className="text-destructive mt-2">
               <Trash2 /> ลบประกาศนี้
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ลบ &ldquo;{item.title}&rdquo;?</DialogTitle>
-              <DialogDescription>ลบแล้วกู้คืนไม่ได้ ถ้าแค่อยากซ่อนจากบอร์ดให้กด &ldquo;เก็บกลับเป็นร่าง&rdquo; แทน</DialogDescription>
-            </DialogHeader>
-            <form action={deleteAnnouncement}>
-              <input type="hidden" name="id" value={item.id} />
-              <DialogFooter>
-                <SubmitButton variant="destructive" pendingText="กำลังลบ…">
-                  ลบประกาศ
-                </SubmitButton>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </CardContent>
     </Card>
   );

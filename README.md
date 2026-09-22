@@ -64,6 +64,8 @@ npm run db:seed
 
 **เฟส 2**
 - **shadcn/ui** — `components.json` ตั้งค่าแล้ว เพิ่ม component ได้ด้วย `npx shadcn@latest add <ชื่อ>`
+  ทุก component ใช้ `cn` จาก `@/lib/utils` และ primitive จากแพ็กเกจรวม `radix-ui` ตัวเดียว
+  (ถ้า CLI รุ่นใหม่เติม `import { cn } from "cn"` มาให้ ต้องแก้กลับเป็น `@/lib/utils`)
 - **ผู้เช่า & สัญญา** — รายการ/ค้นหา, ทำสัญญาใหม่ (ข้อมูลผู้เช่า, ค่าเช่า/ประกัน, ค่าบริการ, จดมิเตอร์ตั้งต้น), หน้ารายละเอียดห้อง, ย้ายออก (จดมิเตอร์วันออก + คืนประกัน), เปลี่ยนสถานะห้องว่าง/จอง/ปิดปรับปรุง · เลขบัตรประชาชนเข้ารหัส AES-256-GCM
 - **บิล & ใบเสร็จ** — สร้าง/อัปเดตบิลร่างทั้งรอบ (ค่าเช่าคิดตามวันเมื่อเข้า/ออกกลางเดือน, ค่าซ่อมที่เรียกเก็บผู้เช่า), ส่งบิล, บันทึกรับเงิน (รับบางส่วนได้) + ออกใบเสร็จเลขรันต่อเนื่อง, คิดค่าปรับ, ยกเลิกบิล, หน้าพิมพ์ใบแจ้งหนี้/ใบเสร็จ A4 (บันทึกเป็น PDF จากหน้าต่างพิมพ์)
 - **Cron รายวัน** `GET /api/cron/billing` (header `Authorization: Bearer <CRON_SECRET>`) — สร้างบิลร่างวันที่ตั้งไว้, ส่งบิลอัตโนมัติ (ถ้าเปิด), ปรับบิลเลยกำหนด + ค่าปรับ
@@ -157,11 +159,13 @@ src/lib/maintenance.ts    เปิดงานซ่อม / มอบหมา
 src/lib/analytics.ts      สรุปรายเดือนสำหรับกราฟและกำไร-ขาดทุน
 src/lib/alerts.ts         แจ้งเตือนที่ระบบสร้างเอง (สัญญาใกล้หมด)
 src/lib/csv.ts            สร้าง CSV ที่ Excel ภาษาไทยเปิดได้
-src/lib/floorplan.ts      โครงสร้างผังชั้น (ทางเดิน บันได ทางเข้า-ออก)
+src/lib/floorplan.ts      โครงสร้างผังชั้น + การต่อช่องชนิดเดียวกันให้เป็นก้อนเดียว
 src/lib/room-style.ts     สีไทล์ห้อง ใช้ร่วมกันทุกหน้าที่แสดงห้อง
 src/lib/scope.ts          ตรวจว่า id จากฟอร์มเป็นของหอที่ผู้ใช้สังกัด
 src/lib/nav.ts            โครงเมนูสองชั้น
-src/components/FloorPlanCell.tsx  ไอคอนและคำอธิบายสัญลักษณ์ของผังชั้น
+src/components/FloorPlanCell.tsx  ไอคอน เส้นทางเดิน และคำอธิบายสัญลักษณ์ของผังชั้น
+src/components/ConfirmDelete.tsx  กล่องยืนยันก่อนลบ (AlertDialog) ใช้ร่วมกันทุกที่ที่มีปุ่มลบ
+src/components/LinkTabs.tsx       แท็บที่เป็นลิงก์ หน้าตาเดียวกับ Tabs ของ shadcn
 src/components/ui         shadcn/ui components
 src/app/(owner)/...       หน้าเจ้าของ: dashboard, rooms, buildings, room-types, tenants,
                           announcements, contracts, meters, billing, expenses, reports,

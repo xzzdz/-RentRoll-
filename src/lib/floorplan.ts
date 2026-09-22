@@ -22,12 +22,12 @@ export type CellIconName = "stairs" | "elevator" | "door" | "bath" | null;
  */
 export const CELL_META: Record<PlanCellType, { label: string; short: string; icon: CellIconName; className: string }> = {
   ROOM: { label: "ห้องพัก", short: "ห้อง", icon: null, className: "bg-card text-foreground border-border" },
-  CORRIDOR: { label: "ทางเดิน", short: "", icon: null, className: "bg-muted text-subtle border-border/70" },
+  CORRIDOR: { label: "ทางเดิน", short: "", icon: null, className: "bg-muted text-subtle border-border" },
   STAIRS: { label: "บันได", short: "บันได", icon: "stairs", className: "bg-plan-move text-plan-move-fg border-plan-move-bd" },
   ELEVATOR: { label: "ลิฟต์", short: "ลิฟต์", icon: "elevator", className: "bg-plan-move text-plan-move-fg border-plan-move-bd" },
   WC: { label: "ห้องน้ำรวม", short: "ห้องน้ำ", icon: "bath", className: "bg-plan-water text-plan-water-fg border-plan-water-bd" },
-  // ทางเข้า-ออกเป็นจุดเชื่อมกับภายนอก ใช้ขอบเข้มหนาแทนสีเพื่อให้เด่นแบบไม่แย่งสีห้อง
-  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", icon: "door", className: "bg-card text-foreground border-foreground border-2" },
+  // ทางเข้า-ออกอยู่ตระกูลเดียวกับบันได/ลิฟต์ (ทางสัญจร) แยกด้วยไอคอนประตูและขอบที่เข้มกว่า
+  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", icon: "door", className: "bg-plan-move text-plan-move-fg border-plan-move-fg/55" },
   EMPTY: { label: "ว่าง (ไม่ใช่พื้นที่)", short: "", icon: null, className: "bg-transparent text-subtle border-dashed border-border" },
 };
 
@@ -110,3 +110,56 @@ export function placedRoomIds(plan: FloorPlan): Set<string> {
   }
   return ids;
 }
+
+/* ---------------------------------------------------------------
+   การต่อช่องให้เป็นก้อนเดียว
+   ผังจริงไม่ได้เป็นช่องสี่เหลี่ยมลอย ๆ เรียงกัน — ทางเดินคือ "ทางเดินเส้นเดียว"
+   ที่ยาวต่อกันไป บันไดสองช่องคือบันไดตัวเดียว เราจึงวาดตารางแบบไม่มีช่องไฟ
+   แล้วลบเส้นขอบระหว่างช่องชนิดเดียวกันทิ้ง เหลือไว้แต่เส้นที่เป็นผนังจริง
+   --------------------------------------------------------------- */
+
+/** ชนิดที่ไหลต่อกันได้ — ห้องไม่อยู่ในนี้ เพราะห้องต้องมีผนังครบสี่ด้านเสมอ */
+const MERGING: PlanCellType[] = ["CORRIDOR", "STAIRS", "ELEVATOR", "WC", "ENTRANCE"];
+
+export type Walls = { top: boolean; right: boolean; bottom: boolean; left: boolean };
+
+function typeAt(cells: PlanCell[], cols: number, row: number, col: number): PlanCellType | null {
+  if (row < 0 || col < 0 || col >= cols) return null;
+  return cells[row * cols + col]?.t ?? null;
+}
+
+/** ด้านไหนต้องตีเส้น — true = เป็นผนัง (ติดกับช่องคนละชนิดหรือขอบอาคาร) */
+export function wallsOf(cells: PlanCell[], cols: number, i: number): Walls {
+  const t = cells[i]?.t ?? "EMPTY";
+  const row = Math.floor(i / cols);
+  const col = i % cols;
+  const joins = (r: number, c: number) => MERGING.includes(t) && typeAt(cells, cols, r, c) === t;
+  return {
+    top: !joins(row - 1, col),
+    right: !joins(row, col + 1),
+    bottom: !joins(row + 1, col),
+    left: !joins(row, col - 1),
+  };
+}
+
+/** คลาสความหนาเส้นขอบตามผนัง — ต้องต่อท้ายคลาสสีของช่อง เพื่อให้ทับค่าเดิมได้ */
+export function wallClass(w: Walls) {
+  return [
+    w.top ? "border-t" : "border-t-0",
+    w.right ? "border-r" : "border-r-0",
+    w.bottom ? "border-b" : "border-b-0",
+    w.left ? "border-l" : "border-l-0",
+  ].join(" ");
+}
+
+/** ทางเดินต่อไปทางไหนบ้าง — ใช้ลากเส้นประกลางทาง ให้เห็นว่าเดินไปไหนได้ */
+export function corridorLinks(cells: PlanCell[], cols: number, i: number) {
+  if (cells[i]?.t !== "CORRIDOR") return null;
+  const row = Math.floor(i / cols);
+  const col = i % cols;
+  const on = (r: number, c: number) => typeAt(cells, cols, r, c) === "CORRIDOR";
+  const links = { up: on(row - 1, col), right: on(row, col + 1), down: on(row + 1, col), left: on(row, col - 1) };
+  return links.up || links.right || links.down || links.left ? links : null;
+}
+
+export type CorridorLinks = NonNullable<ReturnType<typeof corridorLinks>>;

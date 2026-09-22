@@ -8,7 +8,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Input } from "@/components/ui/input";
 import { deleteRoomType, updateRoomType } from "./actions";
 
@@ -85,26 +85,17 @@ export function RoomTypeCard({ type }: { type: RoomTypeView }) {
 
 function DeleteDialog({ type }: { type: RoomTypeView }) {
   return (
-    <Dialog>
-      <DialogTrigger asChild>
+    <ConfirmDelete
+      action={deleteRoomType}
+      fields={{ id: type.id }}
+      title={<>ลบ &ldquo;{type.name}&rdquo;?</>}
+      description="ไม่มีห้องไหนใช้ประเภทนี้แล้ว ลบได้เลย"
+      confirmText="ลบประเภทห้อง"
+      trigger={
         <Button type="button" variant="ghost" size="sm" className="text-destructive mt-2" disabled={type.roomCount > 0}>
           <Trash2 /> ลบประเภทนี้
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>ลบ &ldquo;{type.name}&rdquo;?</DialogTitle>
-          <DialogDescription>ไม่มีห้องไหนใช้ประเภทนี้แล้ว ลบได้เลย</DialogDescription>
-        </DialogHeader>
-        <form action={deleteRoomType}>
-          <input type="hidden" name="id" value={type.id} />
-          <DialogFooter>
-            <SubmitButton variant="destructive" pendingText="กำลังลบ…">
-              ลบประเภทห้อง
-            </SubmitButton>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      }
+    />
   );
 }

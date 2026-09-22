@@ -10,7 +10,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDelete } from "@/components/ConfirmDelete";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { deleteExpense, updateExpense } from "./actions";
@@ -131,28 +131,18 @@ export function ExpenseRow({ expense, buildings, period }: { expense: ExpenseVie
         </form>
 
         {/* ฟอร์มลบต้องอยู่นอกฟอร์มแก้ไข — HTML ซ้อน form ไม่ได้ */}
-        <Dialog>
-          <DialogTrigger asChild>
+        <ConfirmDelete
+          action={deleteExpense}
+          fields={{ id: expense.id, period }}
+          title={<>ลบ &ldquo;{expense.description}&rdquo;?</>}
+          description={`ยอด ${money(expense.amount)} บาท จะถูกลบออกจากรายจ่ายเดือนนี้และกำไร-ขาดทุนจะคิดใหม่`}
+          confirmText="ลบรายจ่าย"
+          trigger={
             <Button type="button" variant="ghost" size="sm" className="text-destructive mt-2">
               <Trash2 /> ลบรายการนี้
             </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ลบ &ldquo;{expense.description}&rdquo;?</DialogTitle>
-              <DialogDescription>ยอด {money(expense.amount)} บาท จะถูกลบออกจากรายจ่ายเดือนนี้และกำไร-ขาดทุนจะคิดใหม่</DialogDescription>
-            </DialogHeader>
-            <form action={deleteExpense}>
-              <input type="hidden" name="id" value={expense.id} />
-              <input type="hidden" name="period" value={period} />
-              <DialogFooter>
-                <SubmitButton variant="destructive" pendingText="กำลังลบ…">
-                  ลบรายจ่าย
-                </SubmitButton>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </CardContent>
     </Card>
   );

@@ -94,6 +94,10 @@
   --plan-water-fg: #0e7490;
   --plan-water-bd: #a5f3fc;
 
+  /* เส้นประกลางทางเดิน — เป็นลวดลายประกอบ ไม่ได้แบกความหมาย
+     จึงไม่ต้องผ่าน AA แค่ต้องมองเห็นบนพื้นเทาอ่อนของทางเดิน */
+  --plan-line: #a8a8b0;
+
   --shadow-soft: 0 1px 2px rgb(24 24 27 / 0.04);
   --shadow-lift: 0 2px 4px rgb(24 24 27 / 0.05), 0 8px 24px rgb(24 24 27 / 0.06);
 }
@@ -149,6 +153,7 @@
   --color-plan-water: var(--plan-water);
   --color-plan-water-fg: var(--plan-water-fg);
   --color-plan-water-bd: var(--plan-water-bd);
+  --color-plan-line: var(--plan-line);
 
   --shadow-soft: var(--shadow-soft);
   --shadow-lift: var(--shadow-lift);

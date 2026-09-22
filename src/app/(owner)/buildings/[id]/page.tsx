@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { db } from "@/lib/db";
 import { emptyPlan, parsePlan, prunePlan } from "@/lib/floorplan";
-import { cn } from "@/lib/utils";
+import { LinkTabs } from "@/components/LinkTabs";
 import { PageHead } from "@/components/PageHead";
 import { FloorPlanEditor } from "./FloorPlanEditor";
 import { RoomGenerator } from "./RoomGenerator";
@@ -65,21 +65,12 @@ export default async function BuildingDetailPage({
       </Link>
       <PageHead title={building.name} sub={`${building.floors} ชั้น · ${rooms.length} ห้อง`} />
 
-      <nav className="bg-muted mb-4 inline-flex gap-0.5 rounded-lg p-[3px]">
-        {TABS.map((t) => (
-          <Link
-            key={t.key}
-            href={`/buildings/${id}?tab=${t.key}`}
-            aria-current={t.key === current.key ? "page" : undefined}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium",
-              t.key === current.key ? "bg-card shadow-xs" : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {t.label}
-          </Link>
-        ))}
-      </nav>
+      <LinkTabs
+        label="ส่วนของตึก"
+        current={current.key}
+        className="mb-4"
+        items={TABS.map((t) => ({ key: t.key, href: `/buildings/${id}?tab=${t.key}`, label: t.label }))}
+      />
 
       {current.key === "rooms" && (
         <div className="grid gap-4">
