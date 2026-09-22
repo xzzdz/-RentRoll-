@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft, FileSignature, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { maskIdCard } from "@/lib/crypto";
 import { bangkokToday } from "@/lib/period";
 import { money, thDate, thDateTime, thPeriod } from "@/lib/format";
@@ -26,8 +27,10 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default async function RoomPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const room = await db.room.findUnique({
-    where: { id },
+  // ต้องเป็นห้องในหอของผู้ใช้เท่านั้น ไม่งั้นรู้ id ก็เปิดดูห้องของหออื่นได้
+  const propertyId = await currentPropertyId();
+  const room = await db.room.findFirst({
+    where: { id, building: { propertyId } },
     include: {
       building: true,
       roomType: true,

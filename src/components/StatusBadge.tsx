@@ -1,4 +1,4 @@
-import type { ContractStatus, InvoiceStatus, MaintenanceStatus, Priority, RoomStatus } from "@prisma/client";
+import type { ContractStatus, InvoiceStatus, MaintenanceStatus, ParcelStatus, Priority, RoomStatus } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 
 type V = "info" | "ok" | "warn" | "bad" | "muted";
@@ -33,6 +33,12 @@ export const MAINTENANCE_STATUS: Record<MaintenanceStatus, [V, string]> = {
   IN_PROGRESS: ["info", "กำลังซ่อม"],
   DONE: ["ok", "เสร็จแล้ว"],
   CANCELLED: ["muted", "ยกเลิก"],
+};
+
+export const PARCEL_STATUS: Record<ParcelStatus, [V, string]> = {
+  WAITING: ["warn", "รอรับ"],
+  PICKED_UP: ["ok", "รับไปแล้ว"],
+  RETURNED: ["muted", "ตีกลับ"],
 };
 
 export const PRIORITY: Record<Priority, [V, string]> = {

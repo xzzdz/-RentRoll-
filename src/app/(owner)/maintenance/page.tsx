@@ -25,7 +25,9 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
   const propertyId = await currentPropertyId();
 
   const search = q.trim();
+  const inProperty = { room: { building: { propertyId } } };
   const where: Prisma.MaintenanceRequestWhereInput = {
+    ...inProperty,
     status: { in: current.status },
     ...(search
       ? {
@@ -46,9 +48,9 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
       take: 300,
       include: { room: { include: { building: true } }, assignedTo: { select: { name: true } } },
     }),
-    db.maintenanceRequest.count({ where: { status: "NEW" } }),
-    db.maintenanceRequest.count({ where: { status: "IN_PROGRESS" } }),
-    db.maintenanceRequest.count({ where: { status: { in: OPEN_STATUS }, priority: "URGENT" } }),
+    db.maintenanceRequest.count({ where: { ...inProperty, status: "NEW" } }),
+    db.maintenanceRequest.count({ where: { ...inProperty, status: "IN_PROGRESS" } }),
+    db.maintenanceRequest.count({ where: { ...inProperty, status: { in: OPEN_STATUS }, priority: "URGENT" } }),
     pendingCharges(propertyId),
   ]);
 

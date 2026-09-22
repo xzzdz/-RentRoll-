@@ -18,7 +18,7 @@ export default async function NewMaintenancePage({ searchParams }: { searchParam
         contracts: { where: { status: "ACTIVE" }, include: { tenants: { where: { isPrimary: true }, include: { tenant: true } } } },
       },
     }),
-    db.user.findMany({ where: { role: "TECHNICIAN", isActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.user.findMany({ where: { role: "TECHNICIAN", isActive: true, propertyId }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const roomOptions: RoomOption[] = rooms.map((r) => ({

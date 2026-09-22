@@ -11,6 +11,8 @@ import {
   LayoutGrid,
   ReceiptText,
   Megaphone,
+  MessageCircle,
+  Package,
   Settings,
   Store,
   Wallet,
@@ -51,6 +53,7 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/tenants", label: "ผู้เช่า & สัญญา", icon: Users, desc: "รายชื่อและสถานะสัญญา" },
       { href: "/contracts/new", label: "ทำสัญญาใหม่", icon: FileSignature, desc: "รับผู้เช่าเข้าห้อง" },
+      { href: "/parcels", label: "พัสดุ", icon: Package, desc: "รับฝากของ จ่ายของ และตามของค้าง" },
       { href: "/announcements", label: "บอร์ดประกาศ", icon: Megaphone, desc: "แจ้งข่าวถึงผู้เช่าทั้งหอหรือรายตึก" },
     ],
   },
@@ -88,6 +91,7 @@ export const NAV: NavGroup[] = [
       { href: "/settings/fees", label: "ค่าบริการอื่น", icon: Tags, desc: "ค่าส่วนกลาง อินเทอร์เน็ต ที่จอดรถ" },
       { href: "/settings/payment", label: "ช่องทางรับเงิน", icon: Banknote, desc: "PromptPay และบัญชีธนาคาร" },
       { href: "/settings/team", label: "ผู้ใช้และช่าง", icon: UserCog, desc: "บัญชีที่เข้าระบบได้" },
+      { href: "/settings/line", label: "แจ้งเตือน LINE", icon: MessageCircle, desc: "ยังเป็นตัวอย่าง — ดูว่าต้องเตรียมอะไร" },
     ],
   },
 ];

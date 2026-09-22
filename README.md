@@ -76,6 +76,11 @@ npm run db:seed
 curl.exe -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/billing
 ```
 
+**เฟส 6 — พัสดุ และการแยกข้อมูลระหว่างหอ**
+- **พัสดุ** `/parcels` — รับฝากของ จ่ายของ (บันทึกชื่อคนที่มารับด้วย) ตีกลับผู้ส่ง · ค้นจากชื่อ เลขห้อง หรือเลขพัสดุ · เตือนของที่ค้างเกิน 7 วัน · กรอกจากมือถือหน้าเคาน์เตอร์ได้ พิมพ์เลขห้องแล้วกดบันทึกก็จบ
+- **ปิดช่องโหว่ข้ามหอ** — หน้าภาพรวม ผู้เช่า งานซ่อม รายชื่อช่าง และหน้าห้อง เดิมดึงข้อมูลโดยไม่กรองหอ พอมีหอที่สองในฐานจะเห็นข้อมูลของกันและกัน
+- **แจ้งเตือน LINE** `/settings/line` — ยังเป็นหน้าตัวอย่าง บอกว่าต้องเตรียมอะไร และโชว์ข้อความที่ระบบสร้างค้างไว้จริง ๆ ที่รอส่ง
+
 **เฟส 4 — บัญชีและการสื่อสาร**
 - **รายจ่าย** `/expenses` — บันทึกเงินที่หอจ่ายออก 8 หมวด (ค่าน้ำ-ไฟส่วนกลาง ค่าแรง ซ่อมบำรุง ภาษี ผ่อนธนาคาร ฯลฯ) แยกรายตึกได้ · หน้าภาพรวมคิดกำไร-ขาดทุนจากรายรับจริงลบรายจ่ายของเดือนเดียวกัน
 - **รายงาน** `/reports` — สรุปรายเดือน (ออกบิล / เก็บได้ / ค้าง / รายจ่าย / กำไร) เลือกช่วงเองได้ และ**ส่งออก CSV 5 ชุด** (บิล · การรับชำระ · รายจ่าย · รายการในบิล · เลขมิเตอร์) ไฟล์ฝัง BOM ไว้แล้ว เปิดใน Excel ภาษาไทยไม่เพี้ยน
@@ -161,6 +166,7 @@ src/lib/alerts.ts         แจ้งเตือนที่ระบบสร
 src/lib/csv.ts            สร้าง CSV ที่ Excel ภาษาไทยเปิดได้
 src/lib/floorplan.ts      โครงสร้างผังชั้น + การต่อช่องชนิดเดียวกันให้เป็นก้อนเดียว
 src/lib/room-style.ts     สีไทล์ห้อง ใช้ร่วมกันทุกหน้าที่แสดงห้อง
+src/lib/parcel.ts         ขนส่ง ขนาดกล่อง และการนับวันที่ของค้าง
 src/lib/scope.ts          ตรวจว่า id จากฟอร์มเป็นของหอที่ผู้ใช้สังกัด
 src/lib/nav.ts            โครงเมนูสองชั้น
 src/components/FloorPlanCell.tsx  ไอคอน เส้นทางเดิน และคำอธิบายสัญลักษณ์ของผังชั้น
@@ -168,8 +174,8 @@ src/components/ConfirmDelete.tsx  กล่องยืนยันก่อน�
 src/components/LinkTabs.tsx       แท็บที่เป็นลิงก์ หน้าตาเดียวกับ Tabs ของ shadcn
 src/components/ui         shadcn/ui components
 src/app/(owner)/...       หน้าเจ้าของ: dashboard, rooms, buildings, room-types, tenants,
-                          announcements, contracts, meters, billing, expenses, reports,
-                          maintenance, settings
+                          announcements, parcels, contracts, meters, billing, expenses,
+                          reports, maintenance, settings
 src/app/print             หน้าพิมพ์ใบแจ้งหนี้/ใบเสร็จ
 src/app/api/cron/billing  งานรายวัน
 src/app/tech              หน้าช่าง (รายการงาน + ปิดงาน)

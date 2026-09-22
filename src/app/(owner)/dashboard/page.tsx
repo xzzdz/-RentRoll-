@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ChevronLeft, ChevronRight, Gauge, ReceiptText, Wrench } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Gauge, Package, ReceiptText, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
 import { currentPropertyId } from "@/lib/auth";
 import { addMonths, bangkokToday, periodOf } from "@/lib/period";
@@ -25,29 +25,33 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const today = bangkokToday();
   const thisMonth = periodOf(today);
   const in60 = new Date(today.getTime() + 60 * 86_400_000);
-  const activeRoom = { room: { contracts: { some: { status: "ACTIVE" as const } } } };
+  // ทุก query ด้านล่างต้องผูกกับหอนี้เสมอ ไม่งั้นตัวเลขจะรวมหออื่นในฐานเข้ามาด้วย
+  const propertyId = property.id;
+  const inProperty = { room: { building: { propertyId } } };
+  const activeRoom = { room: { building: { propertyId }, contracts: { some: { status: "ACTIVE" as const } } } };
 
-  const [series, rooms, payable, meterCount, readCount, draftCount, overdue, openJobs, newJobs, endingSoon] = await Promise.all([
+  const [series, rooms, payable, meterCount, readCount, draftCount, overdue, openJobs, newJobs, endingSoon, waitingParcels] = await Promise.all([
     monthlySeries(property.id, monthsBack(period, 6)),
     roomTotals(property.id),
-    db.invoice.aggregate({ where: { status: { in: PAYABLE } }, _sum: { total: true, paidAmount: true }, _count: true }),
+    db.invoice.aggregate({ where: { status: { in: PAYABLE }, contract: inProperty }, _sum: { total: true, paidAmount: true }, _count: true }),
     db.meter.count({ where: { isActive: true, ...activeRoom } }),
     db.meterReading.count({ where: { periodMonth: period, isInitial: false, meter: { isActive: true, ...activeRoom } } }),
-    db.invoice.count({ where: { status: "DRAFT", period: { is: { periodMonth: period } } } }),
+    db.invoice.count({ where: { status: "DRAFT", period: { is: { propertyId, periodMonth: period } } } }),
     db.invoice.findMany({
-      where: { status: { in: ["OVERDUE", "PARTIAL"] } },
+      where: { status: { in: ["OVERDUE", "PARTIAL"] }, contract: inProperty },
       orderBy: { dueDate: "asc" },
       take: 5,
       include: { contract: { include: { room: { select: { id: true, number: true } } } } },
     }),
     db.maintenanceRequest.findMany({
-      where: { status: { in: OPEN_STATUS } },
+      where: { ...inProperty, status: { in: OPEN_STATUS } },
       orderBy: [{ priority: "desc" }, { createdAt: "asc" }],
       take: 5,
       include: { room: { select: { number: true } }, assignedTo: { select: { name: true } } },
     }),
-    db.maintenanceRequest.count({ where: { status: "NEW" } }),
-    db.contract.count({ where: { status: "ACTIVE", endDate: { gte: today, lte: in60 } } }),
+    db.maintenanceRequest.count({ where: { ...inProperty, status: "NEW" } }),
+    db.contract.count({ where: { ...inProperty, status: "ACTIVE", endDate: { gte: today, lte: in60 } } }),
+    db.parcel.count({ where: { propertyId, status: "WAITING" } }),
   ]);
 
   const current = series[series.length - 1];
@@ -82,6 +86,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     newJobs > 0 && { icon: Wrench, text: `งานแจ้งซ่อมรอมอบหมาย ${newJobs} งาน`, href: "/maintenance", cta: "มอบหมาย", tone: "bad" as const },
     overdue.length > 0 && { icon: AlertTriangle, text: `มีบิลเกินกำหนด/ค้างชำระ ${payable._count} ใบ`, href: "/billing", cta: "ติดตาม", tone: "bad" as const },
     endingSoon > 0 && { icon: AlertTriangle, text: `สัญญาใกล้หมดอายุใน 60 วัน ${endingSoon} ฉบับ`, href: "/tenants", cta: "ดูสัญญา", tone: "warn" as const },
+    waitingParcels > 0 && { icon: Package, text: `พัสดุรอให้ผู้เช่ามารับ ${waitingParcels} ชิ้น`, href: "/parcels", cta: "ดูพัสดุ", tone: "warn" as const },
   ].filter(Boolean) as { icon: typeof Gauge; text: string; href: string; cta: string; tone: "warn" | "bad" }[];
 
   return (

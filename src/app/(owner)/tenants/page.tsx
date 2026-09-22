@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ContractStatus, Prisma } from "@prisma/client";
 import { Phone, Plus, Search } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { bangkokToday } from "@/lib/period";
 import { money, thDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -39,13 +40,15 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
   const { q = "", tab = "active" } = await searchParams;
   const current = TABS.find((t) => t.key === tab) ?? TABS[0];
   const today = bangkokToday();
-  const setting = await db.billingSetting.findFirst({ select: { contractAlertDays: true } });
+  const propertyId = await currentPropertyId();
+  const setting = await db.billingSetting.findUnique({ where: { propertyId }, select: { contractAlertDays: true } });
   // ช่วงเตือนใช้ค่าเดียวกับที่ตั้งไว้ในหน้ารอบบิล จะได้ไม่ขัดกับที่ cron แจ้งเตือน
   const alertDays = setting?.contractAlertDays ?? 45;
   const alertUntil = new Date(today.getTime() + alertDays * 86_400_000);
   const search = q.trim();
 
   const where: Prisma.ContractWhereInput = {
+    room: { building: { propertyId } },
     status: { in: current.status },
     ...(current.expiringOnly ? { endDate: { gte: today, lte: alertUntil } } : {}),
     ...(search
