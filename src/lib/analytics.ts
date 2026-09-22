@@ -11,6 +11,8 @@ export type MonthPoint = {
   occupied: number; // ห้องที่มีคนอยู่ในเดือนนั้น
   water: number; // หน่วยน้ำรวม
   electric: number; // หน่วยไฟรวม
+  spent: number; // รายจ่ายของเดือนนั้น
+  profit: number; // เก็บได้ − รายจ่าย
 };
 
 /** ย้อนหลัง n เดือนนับจาก period (รวม period ด้วย) */
@@ -23,7 +25,7 @@ export async function monthlySeries(propertyId: string, periods: Date[]): Promis
   const from = periods[0];
   const to = addMonths(periods[periods.length - 1], 1);
 
-  const [invoices, contracts, totalRooms] = await Promise.all([
+  const [invoices, contracts, totalRooms, expenses] = await Promise.all([
     db.invoice.findMany({
       where: {
         status: { not: "VOID" },
@@ -42,6 +44,7 @@ export async function monthlySeries(propertyId: string, periods: Date[]): Promis
       select: { startDate: true, moveOutDate: true, endDate: true, status: true },
     }),
     db.room.count({ where: { building: { propertyId } } }),
+    db.expense.findMany({ where: { propertyId, spentAt: { gte: from, lt: to } }, select: { amount: true, spentAt: true } }),
   ]);
 
   return periods.map((p) => {
@@ -60,7 +63,19 @@ export async function monthlySeries(propertyId: string, periods: Date[]): Promis
       return !left || left >= p;
     }).length;
 
-    return { period: p, billed, collected, outstanding: round2(billed - collected), occupied, water: units("WATER"), electric: units("ELECTRIC") };
+    const spent = round2(expenses.filter((e) => e.spentAt >= p && e.spentAt < next).reduce((s, e) => s + e.amount.toNumber(), 0));
+
+    return {
+      period: p,
+      billed,
+      collected,
+      outstanding: round2(billed - collected),
+      occupied,
+      water: units("WATER"),
+      electric: units("ELECTRIC"),
+      spent,
+      profit: round2(collected - spent),
+    };
   }).map((m) => ({ ...m, occupied: Math.min(m.occupied, totalRooms) }));
 }
 

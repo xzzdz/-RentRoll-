@@ -58,9 +58,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const kpis = [
     { label: `เก็บได้ ${thMonthShort(period)}`, value: money(current?.collected ?? 0, 0), sub: `จากที่ออกบิล ${money(current?.billed ?? 0, 0)} บาท` },
+    {
+      label: `กำไร ${thMonthShort(period)}`,
+      value: money(current?.profit ?? 0, 0),
+      sub: `หักรายจ่าย ${money(current?.spent ?? 0, 0)} บาทแล้ว`,
+      tone: (current?.profit ?? 0) < 0 ? "text-destructive" : "text-ok",
+    },
     { label: "ค้างรับทั้งหมด", value: money(outstandingAll, 0), sub: `บาท · ${payable._count} บิล`, tone: outstandingAll > 0 ? "text-destructive" : "" },
     { label: "อัตราเข้าพัก", value: `${pct(rooms.occupied, rooms.total)}%`, sub: `${rooms.occupied} / ${rooms.total} ห้อง · ว่าง ${rooms.vacant}` },
-    { label: "งานซ่อมค้าง", value: String(openJobs.length ? Math.max(openJobs.length, newJobs) : newJobs), sub: `รอมอบหมาย ${newJobs} งาน`, tone: newJobs > 0 ? "text-warn" : "" },
   ];
 
   // สิ่งที่ค้างอยู่จริง ๆ เท่านั้น ถ้าไม่มีอะไรต้องทำก็ไม่ต้องขึ้นการ์ดให้รก

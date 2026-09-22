@@ -163,6 +163,8 @@ model User {
   maintenanceLogs     MaintenanceLog[]
   notifications       Notification[]
   auditLogs           AuditLog[]
+  expenses            Expense[]
+  announcements       Announcement[]
 }
 
 // ---------------------------------------------------------------
@@ -186,6 +188,8 @@ model Property {
   feeItems        FeeItem[]
   billingPeriods  BillingPeriod[]
   docSequences    DocumentSequence[]
+  expenses        Expense[]
+  announcements   Announcement[]
 }
 
 model Building {
@@ -204,6 +208,8 @@ model Building {
   rooms        Room[]
   technicians  TechnicianBuilding[]
   utilityRates UtilityRate[]        // override อัตราเฉพาะตึก (ถ้ามี)
+  expenses      Expense[]
+  announcements Announcement[]
 
   @@unique([propertyId, name])
 }
@@ -332,6 +338,7 @@ model BillingSetting {
   bankAccountNo   String?
   bankAccountName String?
   receiptFooter   String?     // ข้อความท้ายใบเสร็จ
+  contractAlertDays Int       @default(45) // เตือนล่วงหน้ากี่วันก่อนสัญญาหมด
   updatedAt       DateTime    @updatedAt
 
   property Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
@@ -601,6 +608,65 @@ model MaintenanceLog {
 
   request MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   user    User               @relation(fields: [userId], references: [id])
+}
+
+// ---------------------------------------------------------------
+//  EXPENSES (รายจ่าย — ใช้คู่กับรายรับเพื่อดูกำไร-ขาดทุน)
+// ---------------------------------------------------------------
+
+enum ExpenseCategory {
+  UTILITY     // ค่าน้ำ-ไฟบิลใหญ่ที่หอจ่ายให้การประปา/การไฟฟ้า
+  SALARY      // ค่าแรงพนักงาน แม่บ้าน รปภ.
+  MAINTENANCE // ซ่อมบำรุงอาคาร (คนละส่วนกับค่าซ่อมที่เรียกเก็บผู้เช่า)
+  SUPPLIES    // ของใช้สิ้นเปลือง
+  TAX         // ภาษีโรงเรือน ค่าธรรมเนียม
+  LOAN        // ผ่อนธนาคาร ดอกเบี้ย
+  MARKETING   // ค่าโฆษณา ป้าย
+  OTHER
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  propertyId  String
+  buildingId  String? // null = ค่าใช้จ่ายของทั้งหอ
+  category    ExpenseCategory
+  description String
+  amount      Decimal         @db.Decimal(12, 2)
+  spentAt     DateTime        @db.Date
+  note        String?
+  createdById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  property  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  building  Building? @relation(fields: [buildingId], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id])
+
+  @@index([propertyId, spentAt])
+}
+
+// ---------------------------------------------------------------
+//  ANNOUNCEMENTS (บอร์ดประกาศถึงผู้เช่า)
+// ---------------------------------------------------------------
+
+model Announcement {
+  id          String    @id @default(cuid())
+  propertyId  String
+  buildingId  String? // null = ประกาศถึงทุกตึก
+  title       String
+  body        String
+  pinned      Boolean   @default(false)
+  publishedAt DateTime? // null = ฉบับร่าง ยังไม่ประกาศ
+  expiresAt   DateTime? @db.Date // เลยวันนี้แล้วซ่อนจากบอร์ด
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  property  Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  building  Building? @relation(fields: [buildingId], references: [id])
+  createdBy User?     @relation(fields: [createdById], references: [id])
+
+  @@index([propertyId, publishedAt])
 }
 
 // ---------------------------------------------------------------

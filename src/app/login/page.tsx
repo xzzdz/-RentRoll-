@@ -1,5 +1,6 @@
 import { Building2, Gauge, ReceiptText, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
+import { BRAND, Logo } from "@/components/Logo";
 import { LoginForm } from "./LoginForm";
 
 const HIGHLIGHTS = [
@@ -17,10 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <main className="mx-auto grid min-h-dvh max-w-5xl items-center gap-12 px-6 py-12 lg:grid-cols-2 lg:gap-16">
       {/* ฝั่งแนะนำระบบ — ซ่อนบนมือถือเพื่อให้ช่องล็อกอินอยู่เหนือพับทันที */}
       <section className="hidden lg:block">
-        <div className="mb-8 flex items-center gap-2.5">
-          <span className="bg-primary text-primary-foreground font-display grid size-9 place-items-center rounded-lg text-[14px] font-bold">บส</span>
-          <b className="font-display text-[16px] font-semibold">{property?.name ?? "ระบบจัดการหอพัก"}</b>
-        </div>
+        <Logo className="mb-8" markClassName="size-9" sub={BRAND.tagline} />
 
         <h1 className="font-display mb-8 max-w-sm text-[30px] leading-tight font-semibold text-balance">จัดการหอพักทั้งหอ จบในที่เดียว</h1>
 
@@ -39,14 +37,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
       {/* ฝั่งล็อกอิน */}
       <section className="w-full max-w-sm justify-self-center lg:justify-self-end">
-        <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-          <span className="bg-primary text-primary-foreground font-display grid size-9 place-items-center rounded-lg text-[14px] font-bold">บส</span>
-          <b className="font-display text-[15px] leading-tight font-semibold">{property?.name ?? "ระบบจัดการหอพัก"}</b>
-        </div>
+        <Logo className="mb-8 lg:hidden" markClassName="size-9" sub={BRAND.tagline} />
 
         <div className="mb-5 grid gap-1">
           <h2 className="font-display text-xl font-semibold">เข้าสู่ระบบ</h2>
-          <p className="text-muted-foreground text-[13px]">สำหรับเจ้าของหอและช่าง · ผู้เช่าเข้าใช้งานผ่าน LINE</p>
+          <p className="text-muted-foreground text-[13px]">
+            {property?.name ? `${property.name} · ` : ""}สำหรับเจ้าของหอและช่าง
+          </p>
         </div>
 
         <LoginForm next={next} />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, Save, TimerReset } from "lucide-react";
+import { BellRing, CalendarDays, Save, TimerReset } from "lucide-react";
 import { Field } from "@/components/Field";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ export type BillingSettingView = {
   lateFeeAmount: number | null;
   lateFeeMax: number | null;
   graceDays: number;
+  contractAlertDays: number;
 };
 
 function Toggle({ id, name, label, hint, defaultChecked }: { id: string; name: string; label: string; hint: string; defaultChecked: boolean }) {
@@ -133,6 +134,29 @@ export function BillingForm({ setting }: { setting: BillingSettingView }) {
               </Field>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BellRing className="text-primary size-4.5" aria-hidden /> เตือนสัญญาใกล้หมด
+          </CardTitle>
+          <CardDescription>ระบบจะแจ้งเตือนวันละครั้ง (สัญญาละครั้งเดียว) และขึ้นในแท็บ &ldquo;ใกล้หมดอายุ&rdquo; หน้าผู้เช่า</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Field id="contractAlertDays" label="เตือนล่วงหน้า" unit="วัน" hint="ใส่ 0 = ไม่เตือน">
+            <Input
+              id="contractAlertDays"
+              name="contractAlertDays"
+              type="number"
+              min="0"
+              max="180"
+              inputMode="numeric"
+              defaultValue={setting.contractAlertDays}
+              className="num pr-10"
+            />
+          </Field>
         </CardContent>
       </Card>
 

@@ -20,6 +20,7 @@ export default async function BillingSettingsPage() {
           lateFeeAmount: st?.lateFeeAmount ? st.lateFeeAmount.toNumber() : null,
           lateFeeMax: st?.lateFeeMax ? st.lateFeeMax.toNumber() : null,
           graceDays: st?.graceDays ?? 0,
+          contractAlertDays: st?.contractAlertDays ?? 45,
         }}
       />
     </div>

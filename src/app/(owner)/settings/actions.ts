@@ -133,6 +133,7 @@ export async function saveBillingCycle(f: FormData) {
     // เพดานค่าปรับใช้กับแบบรายวันเท่านั้น
     lateFeeMax: lateFeeMode === "PER_DAY" ? numOrNull(f.get("lateFeeMax")) : null,
     graceDays: noFee ? 0 : Math.round(numOrNull(f.get("graceDays")) ?? 0),
+    contractAlertDays: Math.min(180, Math.max(0, Math.round(numOrNull(f.get("contractAlertDays")) ?? 45))),
   };
   await db.billingSetting.upsert({ where: { propertyId: id }, create: { propertyId: id, ...data }, update: data });
   await audit(session.userId, "BillingSetting", id, data);

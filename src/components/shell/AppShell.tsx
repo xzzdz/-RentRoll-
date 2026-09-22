@@ -7,6 +7,7 @@ import { LogOut, Menu, X } from "lucide-react";
 import { logout } from "@/app/login/actions";
 import { groupFor, isActive, MOBILE_TABS, NAV } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -25,12 +26,8 @@ export function AppShell({ name, propertyName, children }: { name: string; prope
     <div className="min-h-dvh lg:grid lg:grid-cols-[72px_216px_1fr]">
       {/* ---------- แถบไอคอนหมวด (จอใหญ่) ---------- */}
       <nav aria-label="หมวดหลัก" className="bg-rail sticky top-0 hidden h-dvh flex-col items-center gap-0.5 border-r py-3 lg:flex">
-        <Link
-          href="/dashboard"
-          title={propertyName}
-          className="bg-primary text-primary-foreground font-display mb-3 grid size-9 place-items-center rounded-lg text-[14px] font-bold"
-        >
-          บส
+        <Link href="/dashboard" title={propertyName} className="mb-3 block">
+          <LogoMark className="size-9" />
         </Link>
         {NAV.map((g) => {
           const on = g.key === group.key;
@@ -94,9 +91,7 @@ export function AppShell({ name, propertyName, children }: { name: string; prope
 
       {/* ---------- แถบบน (จอเล็ก) ---------- */}
       <header className="bg-card/90 sticky top-0 z-30 flex items-center gap-2.5 border-b px-4 py-2.5 backdrop-blur lg:hidden">
-        <span className="bg-primary text-primary-foreground font-display grid size-8 shrink-0 place-items-center rounded-lg text-[13px] font-bold">
-          บส
-        </span>
+        <LogoMark className="size-8 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="text-subtle text-[11px] leading-none">{group.label}</div>
           <b className="font-display block truncate text-[14px] leading-tight">{propertyName}</b>

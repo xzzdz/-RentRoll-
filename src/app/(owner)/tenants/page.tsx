@@ -13,8 +13,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const TABS: { key: string; label: string; status: ContractStatus[] }[] = [
+const TABS: { key: string; label: string; status: ContractStatus[]; expiringOnly?: boolean }[] = [
   { key: "active", label: "ใช้งาน", status: ["ACTIVE"] },
+  { key: "expiring", label: "ใกล้หมดอายุ", status: ["ACTIVE"], expiringOnly: true },
   { key: "ended", label: "สิ้นสุดแล้ว", status: ["ENDED", "TERMINATED"] },
 ];
 
@@ -38,11 +39,15 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
   const { q = "", tab = "active" } = await searchParams;
   const current = TABS.find((t) => t.key === tab) ?? TABS[0];
   const today = bangkokToday();
-  const in60 = new Date(today.getTime() + 60 * 86_400_000);
+  const setting = await db.billingSetting.findFirst({ select: { contractAlertDays: true } });
+  // ช่วงเตือนใช้ค่าเดียวกับที่ตั้งไว้ในหน้ารอบบิล จะได้ไม่ขัดกับที่ cron แจ้งเตือน
+  const alertDays = setting?.contractAlertDays ?? 45;
+  const alertUntil = new Date(today.getTime() + alertDays * 86_400_000);
   const search = q.trim();
 
   const where: Prisma.ContractWhereInput = {
     status: { in: current.status },
+    ...(current.expiringOnly ? { endDate: { gte: today, lte: alertUntil } } : {}),
     ...(search
       ? {
           OR: [
@@ -67,7 +72,7 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
 
   const rows: Row[] = contracts.map((c) => {
     const primary = c.tenants[0]?.tenant;
-    const ending = c.status === "ACTIVE" && c.endDate && c.endDate >= today && c.endDate <= in60;
+    const ending = c.status === "ACTIVE" && c.endDate && c.endDate >= today && c.endDate <= alertUntil;
     const expired = c.status === "ACTIVE" && c.endDate && c.endDate < today;
     return {
       id: c.id,
@@ -87,10 +92,13 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
   });
 
   const owing = rows.filter((r) => r.owed > 0).length;
+  const sub = current.expiringOnly
+    ? `${rows.length} สัญญาจะหมดอายุภายใน ${alertDays} วัน · ตั้งช่วงเตือนได้ที่หน้ารอบบิล`
+    : `${rows.length} สัญญา${owing ? ` · ค้างชำระ ${owing} ห้อง` : ""}`;
 
   return (
     <>
-      <PageHead title="ผู้เช่า & สัญญา" sub={`${rows.length} สัญญา${owing ? ` · ค้างชำระ ${owing} ห้อง` : ""}`}>
+      <PageHead title="ผู้เช่า & สัญญา" sub={sub}>
         <Button asChild>
           <Link href="/contracts/new">
             <Plus /> ทำสัญญาใหม่
@@ -121,7 +129,11 @@ export default async function TenantsPage({ searchParams }: { searchParams: Prom
         </form>
       </div>
 
-      {rows.length === 0 && <p className="bg-card text-muted-foreground rounded-xl border border-dashed p-8 text-center">ไม่พบสัญญา</p>}
+      {rows.length === 0 && (
+        <p className="bg-card text-muted-foreground rounded-xl border border-dashed p-8 text-center">
+          {current.expiringOnly ? `ไม่มีสัญญาที่จะหมดอายุภายใน ${alertDays} วัน` : "ไม่พบสัญญา"}
+        </p>
+      )}
 
       {/* มือถือ: การ์ดต่อสัญญา — ตารางกว้าง ๆ ใช้บนจอเล็กไม่ได้ */}
       <div className="grid gap-2 lg:hidden">

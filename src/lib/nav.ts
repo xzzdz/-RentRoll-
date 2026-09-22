@@ -2,6 +2,7 @@
 // ไฟล์นี้ถูก import จาก client component ห้ามดึงอะไรที่แตะฐานข้อมูล
 import {
   Banknote,
+  BarChart3,
   Building2,
   ClipboardList,
   FileSignature,
@@ -9,8 +10,10 @@ import {
   LayoutDashboard,
   LayoutGrid,
   ReceiptText,
+  Megaphone,
   Settings,
   Store,
+  Wallet,
   Tags,
   UserCog,
   Users,
@@ -48,6 +51,7 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/tenants", label: "ผู้เช่า & สัญญา", icon: Users, desc: "รายชื่อและสถานะสัญญา" },
       { href: "/contracts/new", label: "ทำสัญญาใหม่", icon: FileSignature, desc: "รับผู้เช่าเข้าห้อง" },
+      { href: "/announcements", label: "บอร์ดประกาศ", icon: Megaphone, desc: "แจ้งข่าวถึงผู้เช่าทั้งหอหรือรายตึก" },
     ],
   },
   {
@@ -58,6 +62,8 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/meters", label: "จดมิเตอร์", icon: Gauge, desc: "บันทึกเลขน้ำ-ไฟรอบนี้" },
       { href: "/billing", label: "บิล & ใบเสร็จ", icon: ReceiptText, desc: "ออกบิล รับชำระ ออกใบเสร็จ" },
+      { href: "/expenses", label: "รายจ่าย", icon: Wallet, desc: "เงินที่หอจ่ายออก เพื่อดูกำไร-ขาดทุน" },
+      { href: "/reports", label: "รายงาน", icon: BarChart3, desc: "สรุปรายเดือนและส่งออก Excel" },
     ],
   },
   {

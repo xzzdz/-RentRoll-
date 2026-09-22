@@ -7,8 +7,9 @@ const display = Anuphan({ subsets: ["thai", "latin"], weight: ["500", "600", "70
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono-face" });
 
 export const metadata: Metadata = {
-  title: "ระบบจัดการหอพัก",
-  description: "จัดการห้อง ผู้เช่า มิเตอร์ บิล และงานซ่อม",
+  title: { default: "RentRoll · ระบบบริหารหอพัก", template: "%s · RentRoll" },
+  description: "บริหารหอพักและอพาร์ตเมนต์ครบวงจร — ผังห้อง จดมิเตอร์ ออกบิล งานซ่อม รายรับรายจ่าย",
+  applicationName: "RentRoll",
 };
 
 export const viewport: Viewport = { themeColor: "#fafafa" };

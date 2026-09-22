@@ -2,12 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { addMonths, bangkokToday, periodOf } from "@/lib/period";
 import { generateDrafts, issueInvoices, processOverdue } from "@/lib/invoice";
+import { notifyExpiringContracts } from "@/lib/alerts";
 
 /**
  * งานรายวัน — เรียกวันละครั้ง (เช่น 06:00 น.)
  *   - วันที่ billingDay → สร้างบิลร่างรอบเดือนนี้
  *   - วันที่ issueDay และเปิด autoIssue → ส่งบิลร่างทั้งหมด
  *   - ทุกวัน → บิลที่เลยกำหนด เปลี่ยนเป็น OVERDUE + คิดค่าปรับ
+ *   - ทุกวัน → แจ้งเตือนสัญญาที่ใกล้หมดอายุ (แจ้งสัญญาละครั้ง)
  * ป้องกันด้วย header  Authorization: Bearer <CRON_SECRET>
  */
 export async function GET(req: NextRequest) {
@@ -33,6 +35,7 @@ export async function GET(req: NextRequest) {
       r.issued = await issueInvoices(p.id, { period: periodOf(today) });
     }
     r.overdue = await processOverdue(p.id, today);
+    r.contractAlerts = await notifyExpiringContracts(p.id, st?.contractAlertDays ?? 45, today);
     result.push(r);
   }
   return NextResponse.json({ date: today.toISOString().slice(0, 10), result });
