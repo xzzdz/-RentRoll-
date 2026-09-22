@@ -4,11 +4,12 @@ import type { RoomStatus } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { currentPropertyId, requireRole } from "@/lib/auth";
 import { periodOf } from "@/lib/period";
 import { thPeriod } from "@/lib/format";
 import { withFlash } from "@/lib/flash";
 import { assertContractInScope, assertRoomInScope } from "@/lib/scope";
+import { newInviteCode } from "@/lib/tenant-auth";
 
 export type MoveOutState = { error?: string } | undefined;
 
@@ -78,4 +79,31 @@ export async function setRoomStatus(f: FormData) {
   await db.auditLog.create({ data: { userId: session.userId, entity: "Room", entityId: roomId, action: "UPDATE", before: { status: room.status }, after: { status } } });
   revalidatePath("/rooms");
   redirect(withFlash(`/rooms/${roomId}`, "ok", "เปลี่ยนสถานะห้องแล้ว"));
+}
+
+/**
+ * ออกรหัสให้ผู้เช่าเข้าเว็บฝั่งผู้เช่า (ออกใหม่ทับของเดิมได้)
+ * ออกใหม่ = รหัสเก่าใช้ไม่ได้ทันที ใช้ตอนผู้เช่าทำรหัสหาย
+ */
+export async function issueTenantCode(f: FormData) {
+  const propertyId = await currentPropertyId();
+  const tenantId = String(f.get("tenantId") ?? "");
+  const back = String(f.get("back") ?? "/tenants");
+
+  // ผู้เช่าคนนี้ต้องมีสัญญาอยู่ในหอของผู้ใช้จริง ไม่งั้นยิง id ของหออื่นมาออกรหัสได้
+  const tenant = await db.tenant.findFirst({
+    where: { id: tenantId, contracts: { some: { contract: { room: { building: { propertyId } } } } } },
+    select: { id: true, fullName: true },
+  });
+  if (!tenant) redirect(withFlash(back, "err", "ไม่พบผู้เช่ารายนี้ในหอของคุณ"));
+
+  // รหัสไม่ซ้ำทั้งระบบ — ชนกันได้ยากมาก แต่ลองใหม่ไว้ก่อนดีกว่าให้ error หลุดไปหาผู้ใช้
+  let code = newInviteCode();
+  for (let i = 0; i < 5 && (await db.tenant.findUnique({ where: { inviteCode: code }, select: { id: true } })); i++) {
+    code = newInviteCode();
+  }
+
+  await db.tenant.update({ where: { id: tenant.id }, data: { inviteCode: code } });
+  revalidatePath(back);
+  redirect(withFlash(back, "ok", `ออกรหัสใหม่ให้ ${tenant.fullName} แล้ว — รหัสเดิมใช้ไม่ได้อีก`));
 }

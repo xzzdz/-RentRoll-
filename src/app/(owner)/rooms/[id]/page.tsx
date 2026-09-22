@@ -14,6 +14,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { MoveOutDialog } from "./MoveOutDialog";
+import { TenantAccessCard } from "./TenantAccessCard";
 import { setRoomStatus } from "./actions";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -126,6 +127,7 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
           </CardHeader>
           <CardContent>
             {active ? (
+              <>
               <div className="grid gap-x-8 sm:grid-cols-2">
                 <dl>
                   {active.tenants.map((t) => (
@@ -138,7 +140,6 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
                   <Row label="ติดต่อฉุกเฉิน">
                     {active.tenants[0]?.tenant.emergencyName ?? "—"} <span className="num">{active.tenants[0]?.tenant.emergencyPhone ?? ""}</span>
                   </Row>
-                  <Row label="LINE">{active.tenants[0]?.tenant.userId ? "ผูกบัญชีแล้ว" : `ยังไม่ผูก · โค้ดเชิญ ${active.tenants[0]?.tenant.inviteCode ?? "-"}`}</Row>
                 </dl>
                 <dl>
                   <Row label="เลขที่สัญญา">
@@ -160,6 +161,19 @@ export default async function RoomPage({ params }: { params: Promise<{ id: strin
                   </Row>
                 </dl>
               </div>
+
+              {/* รหัสเข้าเว็บฝั่งผู้เช่า — ออกให้ผู้เช่าหลัก คนเดียวพอ */}
+              {active.tenants[0] && (
+                <div className="mt-3">
+                  <TenantAccessCard
+                    tenantId={active.tenants[0].tenantId}
+                    tenantName={active.tenants[0].tenant.fullName}
+                    code={active.tenants[0].tenant.inviteCode}
+                    back={`/rooms/${room.id}`}
+                  />
+                </div>
+              )}
+              </>
             ) : (
               <p className="text-muted-foreground">ทำสัญญาใหม่แล้วจดเลขมิเตอร์ตั้งต้น ระบบจะใช้เป็นเลขครั้งก่อนของบิลเดือนแรก</p>
             )}

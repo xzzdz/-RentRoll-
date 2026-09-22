@@ -40,7 +40,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
         <div className="mb-5 grid gap-1">
           <h2 className="font-display text-xl font-semibold">เข้าสู่ระบบ</h2>
-          <p className="text-muted-foreground text-[13px]">สำหรับเจ้าของหอและช่าง · ผู้เช่าเข้าใช้งานผ่าน LINE</p>
+          <p className="text-muted-foreground text-[13px]">
+            สำหรับเจ้าของหอและช่าง · ผู้เช่าเข้าที่{" "}
+            <Link href="/t/login" className="text-primary font-semibold hover:underline">
+              หน้าสำหรับผู้เช่า
+            </Link>
+          </p>
         </div>
 
         <LoginForm next={next} />

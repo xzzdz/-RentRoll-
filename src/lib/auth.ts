@@ -48,5 +48,5 @@ export async function currentPropertyId(): Promise<string> {
 }
 
 export function homeFor(role: Role) {
-  return role === "OWNER" ? "/dashboard" : role === "TECHNICIAN" ? "/tech" : "/login";
+  return role === "OWNER" ? "/dashboard" : role === "TECHNICIAN" ? "/tech" : "/t";
 }
