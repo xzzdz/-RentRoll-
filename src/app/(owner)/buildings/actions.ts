@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole, currentPropertyId } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
@@ -170,8 +171,12 @@ export async function saveFloorPlan(f: FormData) {
     }
   }
 
-  await db.building.update({ where: { id: buildingId }, data: { floorPlan: plan } });
+  // ล้างจนไม่เหลืออะไรเลย = ยังไม่มีผัง ไม่ใช่ผังเปล่า ๆ
+  // ไม่งั้นหน้าผังห้องจะวาดตารางว่างทับ แล้วห้องหายไปทั้งตึก
+  const blank = Object.values(plan.floors).every((cells) => cells.every((c) => c.t === "EMPTY"));
+
+  await db.building.update({ where: { id: buildingId }, data: { floorPlan: blank ? Prisma.DbNull : plan } });
   revalidatePath("/rooms");
   revalidatePath(back);
-  redirect(withFlash(back, "ok", "บันทึกผังแล้ว"));
+  redirect(withFlash(back, "ok", blank ? "ล้างผังแล้ว กลับไปเรียงห้องอัตโนมัติ" : "บันทึกผังแล้ว"));
 }

@@ -13,6 +13,9 @@ import { CellContent, CorridorPath, PlanLegend } from "@/components/FloorPlanCel
 import { ROOM_STATUS } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 
+/** ช่องในผังโตได้ถึงเท่านี้ — กว้างกว่านี้ห้องจะกลายเป็นกล่องใหญ่เทอะทะเวลามีไม่กี่คอลัมน์ */
+const PLAN_MAX_CELL = 96;
+
 type RoomTile = {
   id: string;
   number: string;
@@ -77,6 +80,8 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
 
   const byId = new Map(tiles.map((t) => [t.id, t]));
   const plan = parsePlan(building.floorPlan);
+  // ผังเก่าบางอันอาจถูกล้างจนว่างทั้งตึก ถือว่ายังไม่มีผังเหมือนกัน
+  const hasPlan = !!plan && Object.values(plan.floors).some((cells) => cells.some((c) => c.t !== "EMPTY"));
   const floors = [...new Set(tiles.map((t) => t.floor))].sort((a, b) => b - a);
   const count = (s: RoomStatus) => tiles.filter((t) => t.status === s).length;
   const overdueCount = tiles.filter((t) => t.overdue).length;
@@ -131,63 +136,96 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
           )}
 
           {floors.map((f) => {
-            const cells = plan?.floors[String(f)];
             const floorRooms = tiles.filter((t) => t.floor === f);
+            const cells = plan?.floors[String(f)];
+            // ชั้นที่ยังไม่ได้วาดอะไรเลย ให้กลับไปเรียงอัตโนมัติ ไม่งั้นจะได้ตารางว่างเปล่า
+            const drawn = cells?.some((c) => c.t !== "EMPTY") ?? false;
+            // ห้องที่มีอยู่จริงแต่ไม่ได้อยู่ในผัง ต้องโผล่ให้เห็นอยู่ดี ห้ามหายไปเฉย ๆ
+            const inPlan = new Set(cells?.filter((c) => c.t === "ROOM" && c.roomId).map((c) => c.roomId!) ?? []);
+            const missing = drawn ? floorRooms.filter((r) => !inPlan.has(r.id)) : [];
 
             return (
               <section key={f} className="grid gap-1.5 border-t border-dashed py-2.5 first:border-0 first:pt-0">
-                <div className="text-subtle font-display text-[13px] font-semibold">
-                  ชั้น {f} <span className="text-[11px] font-normal">· {floorRooms.length} ห้อง</span>
-                </div>
-
-                {cells && plan ? (
+                {drawn && cells && plan ? (
                   /* ผังที่จัดไว้เอง — วาดแบบไม่มีช่องไฟ แล้วลบเส้นระหว่างช่องชนิดเดียวกันทิ้ง
                      ทางเดินที่ต่อกันจึงกลายเป็นทางเดินเส้นเดียว ไม่ใช่ช่องสี่เหลี่ยมหลุด ๆ เรียงกัน */
                   <div className="overflow-x-auto pb-1">
-                    <div className="bg-background shadow-soft rounded-xl border p-2.5" style={{ maxWidth: plan.cols * 76 + 20 }}>
-                      <div className="grid" style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(48px, 1fr))` }}>
-                        {cells.map((c, i) => {
-                          if (c.t === "EMPTY") return <div key={i} className="aspect-square" aria-hidden />;
-
-                          const room = c.roomId ? byId.get(c.roomId) : null;
-                          const walls = wallClass(wallsOf(cells, plan.cols, i));
-                          if (room) return <Tile key={i} room={room} walls={walls} />;
-
-                          return (
-                            <div
-                              key={i}
-                              title={CELL_META[c.t].label}
-                              className={cn("relative grid aspect-square place-items-center", CELL_META[c.t].className, walls)}
-                            >
-                              <CorridorPath links={corridorLinks(cells, plan.cols, i)} />
-                              <CellContent type={c.t} compact />
-                            </div>
-                          );
-                        })}
+                    {/* ชื่อชั้นอยู่บนแผ่นเดียวกับผัง เหมือนหัวกระดาษแปลน
+                        แผ่นจึงวางกลางหน้าได้โดยไม่หลุดจากหัวเรื่อง และทุกชั้นกว้างเท่ากันอยู่แล้ว */}
+                    <div className="bg-background shadow-soft mx-auto overflow-hidden rounded-xl border" style={{ maxWidth: PLAN_MAX_CELL * plan.cols + 20 }}>
+                      <div className="bg-card flex items-baseline justify-between gap-3 border-b px-3 py-2">
+                        <b className="font-display text-[13px] font-semibold">ชั้น {f}</b>
+                        <span className="text-subtle text-[11px]">
+                          <span className="num">{floorRooms.length}</span> ห้อง
+                        </span>
                       </div>
+                      <div className="p-2.5">
+                        <div className="grid" style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(48px, 1fr))` }}>
+                          {cells.map((c, i) => {
+                            if (c.t === "EMPTY") return <div key={i} className="aspect-square" aria-hidden />;
+
+                            const room = c.roomId ? byId.get(c.roomId) : null;
+                            const walls = wallClass(wallsOf(cells, plan.cols, i));
+                            if (room) return <Tile key={i} room={room} walls={walls} />;
+
+                            return (
+                              <div
+                                key={i}
+                                title={CELL_META[c.t].label}
+                                className={cn("relative grid aspect-square place-items-center", CELL_META[c.t].className, walls)}
+                              >
+                                <CorridorPath links={corridorLinks(cells, plan.cols, i)} />
+                                <CellContent type={c.t} compact />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* ห้องที่มีอยู่จริงแต่ไม่ได้อยู่ในผัง ต้องโผล่ให้เห็นอยู่ดี ห้ามหายไปเฉย ๆ */}
+                      {missing.length > 0 && (
+                        <div className="bg-card grid gap-1.5 border-t px-3 py-2.5">
+                          <span className="text-subtle text-[12px]">
+                            ยังไม่ได้วางในผัง <span className="num">({missing.length})</span> —{" "}
+                            <Link href={`/buildings/${building.id}?tab=plan`} className="text-primary hover:underline">
+                              วางเพิ่ม
+                            </Link>
+                          </span>
+                          <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1.5">
+                            {missing.map((r) => (
+                              <Tile key={r.id} room={r} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  /* ยังไม่ได้จัดผัง — เรียงอัตโนมัติ */
-                  <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1.5">
-                    {floorRooms.map((r) => (
-                      <Tile key={r.id} room={r} />
-                    ))}
-                  </div>
+                  /* ยังไม่ได้จัดผังชั้นนี้ — เรียงอัตโนมัติ */
+                  <>
+                    <div className="text-subtle font-display text-[13px] font-semibold">
+                      ชั้น {f} <span className="text-[11px] font-normal">· {floorRooms.length} ห้อง</span>
+                    </div>
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1.5">
+                      {floorRooms.map((r) => (
+                        <Tile key={r.id} room={r} />
+                      ))}
+                    </div>
+                  </>
                 )}
               </section>
             );
           })}
         </div>
 
-        {plan && (
+        {hasPlan && (
           <div className="border-t px-4 py-3">
             <PlanLegend />
           </div>
         )}
       </div>
 
-      {!plan && tiles.length > 0 && (
+      {!hasPlan && tiles.length > 0 && (
         <p className="text-subtle mt-3 px-1 text-[12.5px]">
           อยากให้ผังตรงกับตึกจริง (มีทางเดิน บันได ลิฟต์)?{" "}
           <Link href={`/buildings/${building.id}?tab=plan`} className="text-primary hover:underline">
