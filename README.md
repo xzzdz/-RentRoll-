@@ -41,8 +41,8 @@ npm run dev
 ไม่ต้องเปิด Docker — เอา connection string จาก Supabase Dashboard → **Connect** → แท็บ **ORMs** → **Prisma** แล้วใส่ทั้งสองบรรทัดใน `.env`
 
 ```
-DATABASE_URL="postgresql://postgres.<ref>:<รหัส>@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
-DIRECT_URL="postgresql://postgres.<ref>:<รหัส>@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
+DATABASE_URL="postgresql://postgres.<ref>:<รหัส>@aws-0-<region>.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.<ref>:<รหัส>@aws-0-<region>.pooler.supabase.com:5432/postgres"
 ```
 
 ต้องมีสองบรรทัดเพราะ `DATABASE_URL` ต่อผ่าน **transaction pooler** (พอร์ต 6543) ซึ่งเร็วและรองรับการต่อพร้อมกันเยอะ แต่ใช้รัน migration ไม่ได้ — `prisma migrate` เลยใช้ `DIRECT_URL` (พอร์ต 5432) แทน ตั้งไว้ใน [schema.prisma](prisma/schema.prisma) แล้ว
@@ -54,7 +54,13 @@ npx prisma migrate deploy
 npm run db:seed
 ```
 
-เลือก region ให้ใกล้ผู้ใช้ — `ap-southeast-1` (สิงคโปร์) เร็วสุดสำหรับไทย
+เลือก region ให้ใกล้ผู้ใช้ · ที่ใกล้ไทยที่สุดคือ `ap-southeast-1` (สิงคโปร์)
+รองลงมา `ap-northeast-2` (โซล) และ `ap-northeast-1` (โตเกียว)
+
+**เลือกแล้วต้องจำไว้** — ภูมิภาคของ Vercel ใน `vercel.json` ต้องตั้งให้ตรงกับที่นี่
+ไม่งั้นทุก query จะวิ่งข้ามทวีปไปกลับ (ดูหัวข้อ deploy ด้านล่าง)
+
+ตอนนี้โปรเจกต์ใช้ `ap-northeast-2` (โซล) คู่กับ Vercel `icn1`
 
 ## เอาขึ้นใช้งานจริง (Vercel)
 
@@ -87,8 +93,10 @@ New Project → เลือก repo นี้ → Framework Next.js (ตรว�
 **4. กด Deploy**
 
 `vercel.json` ตั้งไว้แล้วสองอย่าง
-- `regions: ["sin1"]` — ให้เซิร์ฟเวอร์อยู่สิงคโปร์ ที่เดียวกับฐานข้อมูล
+- `regions: ["icn1"]` — ให้เซิร์ฟเวอร์อยู่โซล ที่เดียวกับฐานข้อมูล (`ap-northeast-2`)
   ถ้าปล่อยเป็นค่าเริ่มต้น (สหรัฐฯ) ทุก query จะวิ่งข้ามมหาสมุทรไปกลับ หน้าเว็บจะอืดชัดเจน
+  **ย้าย Supabase ไป region อื่นเมื่อไหร่ ต้องแก้ตรงนี้ด้วยเสมอ** — เทียบคู่: สิงคโปร์ `ap-southeast-1` ↔ `sin1` ·
+  โซล `ap-northeast-2` ↔ `icn1` · โตเกียว `ap-northeast-1` ↔ `hnd1`
 - `crons` — ยิง `/api/cron/billing` ทุกวัน 18:00 UTC = **01:00 น. เวลาไทย**
 
 ส่วน `vercel-build` ใน package.json สั่ง `prisma migrate deploy` ก่อน build ทุกครั้ง
