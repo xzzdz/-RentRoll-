@@ -12,15 +12,18 @@ import { ROOM_STATUS } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 
 /**
- * ยิ่งต้องลงมือทำ ยิ่งเด่น — ห้องที่มีผู้เช่าคือสถานะปกติจึงเงียบที่สุด
- * ห้องว่างใช้ขอบประ (ช่องโล่ง = ว่าง) ไม่ใช้สี เพราะสีเก็บไว้ให้สิ่งที่ผิดปกติ
+ * สีบอกสถานะห้องแบบเห็นปราดเดียว — เขียวคือห้องทำรายได้ เหลืองคือกำลังจะเข้า
+ * ขาวขอบประคือยังว่าง เทาลายทแยงคือใช้ไม่ได้
  */
 const TILE: Record<RoomStatus, string> = {
-  OCCUPIED: "bg-card border-border",
-  VACANT: "bg-background border-dashed border-foreground/35",
-  RESERVED: "bg-warn-soft border-warn/30 text-warn",
-  MAINTENANCE: "bg-muted hatch border-border text-muted-foreground",
+  OCCUPIED: "bg-room-live text-room-live-fg border-room-live-bd",
+  VACANT: "bg-card text-room-free-fg border-room-free-bd border-dashed",
+  RESERVED: "bg-room-hold text-room-hold-fg border-room-hold-bd",
+  MAINTENANCE: "bg-room-closed text-room-closed-fg border-room-closed-bd hatch",
 };
+
+/** ค้างชำระทับสีสถานะเดิมเสมอ เพราะเป็นสิ่งที่เจ้าของต้องเห็นก่อนอย่างอื่น */
+const TILE_OVERDUE = "bg-room-due text-room-due-fg border-room-due-bd";
 
 type RoomTile = {
   id: string;
@@ -103,32 +106,30 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
       </PageHead>
 
       <div className="bg-card rounded-xl border">
-        {/* คำอธิบายสัญลักษณ์ — แยกสองแถว: สถานะห้อง กับ สิ่งที่ต้องตาม */}
+        {/* คำอธิบายสัญลักษณ์ — สถานะห้องมาก่อน แล้วค่อยธงที่ทับอยู่บนห้อง */}
         <div className="grid gap-2 border-b px-4 py-3">
-          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px]">
+          <div className="flex flex-wrap items-center gap-x-3.5 gap-y-2 text-[12px]">
+            <span className="eyebrow">สถานะห้อง</span>
             {(Object.keys(TILE) as RoomStatus[]).map((s) => (
-              <span key={s} className="inline-flex items-center gap-1.5">
+              <span key={s} className="text-muted-foreground inline-flex items-center gap-1.5">
                 <i className={cn("inline-block size-4 rounded border", TILE[s])} />
                 {ROOM_STATUS[s][1]} <span className="num">({count(s)})</span>
               </span>
             ))}
+            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+              <i className={cn("inline-block size-4 rounded border", TILE_OVERDUE)} />
+              ค้างชำระ <span className="num">({overdueCount})</span>
+            </span>
           </div>
-          {(overdueCount > 0 || repairCount > 0) && (
-            <div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t pt-2 text-[12px]">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-destructive bg-bad-soft grid size-4 place-items-center rounded">
-                  <Banknote className="size-2.5" aria-hidden />
-                </span>
-                ค้างชำระ <span className="num">({overdueCount})</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="text-warn bg-warn-soft grid size-4 place-items-center rounded">
-                  <Wrench className="size-2.5" aria-hidden />
-                </span>
-                มีงานซ่อม <span className="num">({repairCount})</span>
-              </span>
-            </div>
-          )}
+          <div className="text-muted-foreground flex flex-wrap items-center gap-x-3.5 gap-y-2 border-t pt-2 text-[12px]">
+            <span className="eyebrow">สัญลักษณ์บนห้อง</span>
+            <span className="inline-flex items-center gap-1.5">
+              <Banknote className="text-room-due-fg size-3.5" aria-hidden /> ค้างชำระ
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Wrench className="text-room-hold-fg size-3.5" aria-hidden /> มีงานซ่อม <span className="num">({repairCount})</span>
+            </span>
+          </div>
         </div>
 
         <div className="grid gap-1 p-3 lg:p-4">
@@ -152,13 +153,13 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
                 </div>
 
                 {cells && plan ? (
-                  /* ผังที่จัดไว้เอง — พื้นที่ส่วนกลางเป็นเทา แยกด้วยไอคอน */
+                  /* ผังที่จัดไว้เอง — ห้องเป็นสีสด พื้นที่ส่วนกลางเป็นสีเย็นจาง + ไอคอน */
                   <div className="overflow-x-auto">
                     <div
                       className="grid gap-1"
                       style={{
-                        gridTemplateColumns: `repeat(${plan.cols}, minmax(44px, 1fr))`,
-                        maxWidth: `${plan.cols * 88}px`,
+                        gridTemplateColumns: `repeat(${plan.cols}, minmax(48px, 1fr))`,
+                        maxWidth: `${plan.cols * 92}px`,
                         gridTemplateRows: `repeat(${rowsOf(cells, plan.cols)}, auto)`,
                       }}
                     >
@@ -216,21 +217,17 @@ function Tile({ room, square }: { room: RoomTile; square?: boolean }) {
       href={`/rooms/${room.id}`}
       title={`${room.number} · ${room.typeName} · ${money(room.rent, 0)} บาท${room.tenant ? ` · ${room.tenant}` : ""}${flags ? ` · ${flags}` : ""}`}
       className={cn(
-        "hover:ring-primary relative rounded-md border px-1.5 py-1 transition-shadow hover:ring-2",
-        square ? "grid aspect-square place-content-center text-center" : "min-h-[54px]",
-        TILE[room.status],
-        // ค้างชำระเป็นแถบแดงด้านซ้าย ไม่ใช่เปลี่ยนสีพื้นทั้งช่อง สถานะห้องจึงยังอ่านได้พร้อมกัน
-        room.overdue && "shadow-[inset_3px_0_0_var(--destructive)]",
+        "hover:ring-primary relative rounded-lg border px-1.5 py-1 transition-shadow hover:ring-2",
+        square ? "grid aspect-square place-content-center text-center" : "min-h-[56px]",
+        room.overdue ? TILE_OVERDUE : TILE[room.status],
       )}
     >
-      <span className={cn("absolute top-0.5 right-0.5 flex gap-0.5", square && "top-0 right-0")}>
-        {room.overdue && <Banknote className="text-destructive size-3" aria-label="ค้างชำระ" />}
-        {room.repair && <Wrench className="text-warn size-3" aria-label="มีงานซ่อม" />}
+      <span className={cn("absolute flex gap-0.5", square ? "top-1 right-1" : "top-1.5 right-1.5")}>
+        {room.overdue && <Banknote className="size-3.5" aria-label="ค้างชำระ" />}
+        {room.repair && <Wrench className="text-room-hold-fg size-3.5" aria-label="มีงานซ่อม" />}
       </span>
-      <span className="num block text-[12.5px] font-bold">{room.number}</span>
-      {!square && (
-        <span className="text-muted-foreground block truncate text-[11px]">{room.tenant ? room.tenant.split(" ")[0] : ROOM_STATUS[room.status][1]}</span>
-      )}
+      <span className="num block text-[13px] font-bold">{room.number}</span>
+      {!square && <span className="block truncate text-[11px] opacity-80">{room.tenant ? room.tenant.split(" ")[0] : ROOM_STATUS[room.status][1]}</span>}
     </Link>
   );
 }

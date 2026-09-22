@@ -3,11 +3,12 @@ import { Badge } from "@/components/ui/badge";
 
 type V = "info" | "ok" | "warn" | "bad" | "muted";
 
+// สีตรงกับไทล์ในผังห้อง เพื่อให้จำสีเดียวใช้ได้ทั้งสองที่
 export const ROOM_STATUS: Record<RoomStatus, [V, string]> = {
-  OCCUPIED: ["info", "มีผู้เช่า"],
+  OCCUPIED: ["ok", "มีผู้เช่า"],
   VACANT: ["muted", "ว่าง"],
   RESERVED: ["warn", "จองแล้ว"],
-  MAINTENANCE: ["bad", "ปิดปรับปรุง"],
+  MAINTENANCE: ["info", "ปิดปรับปรุง"],
 };
 
 export const INVOICE_STATUS: Record<InvoiceStatus, [V, string]> = {

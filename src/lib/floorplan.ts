@@ -16,18 +16,19 @@ export const MAX_CELLS = 400;
 export type CellIconName = "stairs" | "elevator" | "door" | "bath" | null;
 
 /**
- * พื้นที่ส่วนกลางทั้งหมดเป็น "เทา" เหมือนกันหมด แล้วแยกด้วยไอคอน
- * เพราะสีในระบบนี้สงวนไว้บอกสถานะห้อง ถ้าเอาสีมาแยกบันได/ลิฟต์/ห้องน้ำด้วย
- * ผังจะกลายเป็นสีรุ้งจนดูไม่ออกว่าห้องไหนต้องจัดการ
+ * โครงสร้างอาคารใช้ "สีเย็น พื้นจาง" ส่วนห้องใช้ "สีสด พื้นเข้ม"
+ * ต่างกันที่ความอิ่มสี ตาจึงแยกสองชั้นนี้ออกก่อนอ่านรายละเอียด
+ * และทุกช่องมีไอคอนกำกับ ไม่ได้พึ่งสีอย่างเดียว
  */
 export const CELL_META: Record<PlanCellType, { label: string; short: string; icon: CellIconName; className: string }> = {
   ROOM: { label: "ห้องพัก", short: "ห้อง", icon: null, className: "bg-card text-foreground border-border" },
-  CORRIDOR: { label: "ทางเดิน", short: "", icon: null, className: "bg-muted text-subtle border-transparent" },
-  STAIRS: { label: "บันได", short: "บันได", icon: "stairs", className: "bg-secondary text-muted-foreground border-border" },
-  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", icon: "door", className: "bg-secondary text-foreground border-foreground/30" },
-  ELEVATOR: { label: "ลิฟต์", short: "ลิฟต์", icon: "elevator", className: "bg-secondary text-muted-foreground border-border" },
-  WC: { label: "ห้องน้ำรวม", short: "ห้องน้ำ", icon: "bath", className: "bg-secondary text-muted-foreground border-border" },
-  EMPTY: { label: "ว่าง (ไม่ใช่พื้นที่)", short: "", icon: null, className: "bg-transparent text-subtle border-dashed" },
+  CORRIDOR: { label: "ทางเดิน", short: "", icon: null, className: "bg-muted text-subtle border-border/70" },
+  STAIRS: { label: "บันได", short: "บันได", icon: "stairs", className: "bg-plan-move text-plan-move-fg border-plan-move-bd" },
+  ELEVATOR: { label: "ลิฟต์", short: "ลิฟต์", icon: "elevator", className: "bg-plan-move text-plan-move-fg border-plan-move-bd" },
+  WC: { label: "ห้องน้ำรวม", short: "ห้องน้ำ", icon: "bath", className: "bg-plan-water text-plan-water-fg border-plan-water-bd" },
+  // ทางเข้า-ออกเป็นจุดเชื่อมกับภายนอก ใช้ขอบเข้มหนาแทนสีเพื่อให้เด่นแบบไม่แย่งสีห้อง
+  ENTRANCE: { label: "ทางเข้า-ออก", short: "เข้า-ออก", icon: "door", className: "bg-card text-foreground border-foreground border-2" },
+  EMPTY: { label: "ว่าง (ไม่ใช่พื้นที่)", short: "", icon: null, className: "bg-transparent text-subtle border-dashed border-border" },
 };
 
 /** เรียงตามที่ใช้บ่อย — ทางเดินกับบันไดคือสองอย่างที่วาดเยอะสุด */

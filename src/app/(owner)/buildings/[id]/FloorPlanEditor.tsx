@@ -286,7 +286,7 @@ export function FloorPlanEditor({
           >
             <div
               className="mx-auto grid gap-1"
-              style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(38px, 1fr))`, maxWidth: `${plan.cols * 76}px` }}
+              style={{ gridTemplateColumns: `repeat(${plan.cols}, minmax(42px, 1fr))`, maxWidth: `${plan.cols * 84}px` }}
             >
               {cells.map((c, i) => {
                 const room = c.t === "ROOM" && c.roomId ? roomById.get(c.roomId) : null;

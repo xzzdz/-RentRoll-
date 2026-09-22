@@ -8,8 +8,8 @@
 /* ===============================================================
    ภาษาสีของระบบ — จำกฎเดียว:
      ม่วงคราม = สิ่งที่กดได้   (ปุ่ม ลิงก์ เมนูที่เลือกอยู่ ขอบโฟกัส)
-     สี        = สถานะข้อมูล   (ไล่ระดับ 5 ขั้นด้านล่าง)
-     เทา       = โครงสร้าง     (พื้น ขอบ ทางเดิน บันได ลิฟต์)
+     สีอุ่น/สด = สถานะข้อมูล   (ไล่ระดับ 5 ขั้นด้านล่าง)
+     สีเย็น/จาง = โครงสร้างอาคาร (ทางเดิน บันได ลิฟต์ ห้องน้ำ — ดูตอนท้ายไฟล์)
 
    ไล่ระดับสถานะ จากเงียบไปดัง — ยิ่งดังยิ่งต้องลงมือทำ
      1. muted   เทาอ่อน  ไม่ใช้งานแล้ว        (ฉบับร่าง ยกเลิก สิ้นสุด)
@@ -61,6 +61,39 @@
   --chart-1: #4f46e5;
   --chart-2: #8e8e9b;
 
+  /* ---------------------------------------------------------------
+     ผังห้อง — แยกสองชั้นด้วย "ความอิ่มสี"
+       ห้อง      = พื้นเติมสีเต็ม สีอุ่น/สด  (เขียว แดง เหลือง เทา)
+       โครงสร้าง = พื้นจาง สีเย็น            (ฟ้า ฟ้าอมเขียว)
+     ตาจึงจับกลุ่มห้องได้ก่อน แล้วค่อยเห็นทางเดิน-บันไดเป็นฉากหลัง
+     --------------------------------------------------------------- */
+  --room-live: #ecfdf5; /* มีผู้เช่า — ห้องทำรายได้อยู่ */
+  --room-live-fg: #047857;
+  --room-live-bd: #6ee7b7;
+
+  --room-due: #fef2f2; /* ค้างชำระ — ทับสถานะอื่นเสมอ เพราะสำคัญสุด */
+  --room-due-fg: #b91c1c;
+  --room-due-bd: #fca5a5;
+
+  --room-hold: #fefce8; /* จองแล้ว — รอเข้าอยู่ */
+  --room-hold-fg: #a16207;
+  --room-hold-bd: #fcd34d;
+
+  --room-free-fg: #52525b; /* ว่าง — ใช้ขอบประบนพื้นขาว */
+  --room-free-bd: #a1a1aa;
+
+  --room-closed: #f4f4f5; /* ปิดปรับปรุง — คู่กับลายทแยง */
+  --room-closed-fg: #52525b;
+  --room-closed-bd: #d4d4d8;
+
+  --plan-move: #eff6ff; /* บันได/ลิฟต์ — ทางสัญจรแนวตั้ง */
+  --plan-move-fg: #1d4ed8;
+  --plan-move-bd: #bfdbfe;
+
+  --plan-water: #ecfeff; /* ห้องน้ำรวม */
+  --plan-water-fg: #0e7490;
+  --plan-water-bd: #a5f3fc;
+
   --shadow-soft: 0 1px 2px rgb(24 24 27 / 0.04);
   --shadow-lift: 0 2px 4px rgb(24 24 27 / 0.05), 0 8px 24px rgb(24 24 27 / 0.06);
 }
@@ -95,6 +128,27 @@
   --color-rail-active: var(--rail-active);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
+
+  --color-room-live: var(--room-live);
+  --color-room-live-fg: var(--room-live-fg);
+  --color-room-live-bd: var(--room-live-bd);
+  --color-room-due: var(--room-due);
+  --color-room-due-fg: var(--room-due-fg);
+  --color-room-due-bd: var(--room-due-bd);
+  --color-room-hold: var(--room-hold);
+  --color-room-hold-fg: var(--room-hold-fg);
+  --color-room-hold-bd: var(--room-hold-bd);
+  --color-room-free-fg: var(--room-free-fg);
+  --color-room-free-bd: var(--room-free-bd);
+  --color-room-closed: var(--room-closed);
+  --color-room-closed-fg: var(--room-closed-fg);
+  --color-room-closed-bd: var(--room-closed-bd);
+  --color-plan-move: var(--plan-move);
+  --color-plan-move-fg: var(--plan-move-fg);
+  --color-plan-move-bd: var(--plan-move-bd);
+  --color-plan-water: var(--plan-water);
+  --color-plan-water-fg: var(--plan-water-fg);
+  --color-plan-water-bd: var(--plan-water-bd);
 
   --shadow-soft: var(--shadow-soft);
   --shadow-lift: var(--shadow-lift);
