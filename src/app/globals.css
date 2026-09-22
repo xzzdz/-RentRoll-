@@ -4,33 +4,34 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------
-   ธีม — โทนเขียวน้ำทะเล (teal) สื่อความน่าเชื่อถือ + อ่านสบายตา
+   ธีม — โทนม่วง-คราม (indigo/violet) บนพื้นเทาอมม่วง
+   ทุกคู่สีข้อความ/พื้นผ่าน WCAG AA (>= 4.5:1) ทั้งสองโหมด
    ทุกสีต้องมีคู่ light/dark เสมอ ห้ามใส่ hex ตรง ๆ ใน component
    --------------------------------------------------------------- */
 :root {
   --radius: 0.875rem;
 
-  --background: #f6f8f8;
-  --foreground: #0f1d1c;
+  --background: #f7f7fb;
+  --foreground: #191927;
   --card: #ffffff;
-  --card-foreground: #0f1d1c;
+  --card-foreground: #191927;
   --popover: #ffffff;
-  --popover-foreground: #0f1d1c;
-  --primary: #0f766e;
+  --popover-foreground: #191927;
+  --primary: #4f46e5;
   --primary-foreground: #ffffff;
-  --secondary: #edf2f2;
-  --secondary-foreground: #0f1d1c;
-  --muted: #edf2f2;
-  --muted-foreground: #55686a;
-  --accent: #d9f2ee;
-  --accent-foreground: #0b5b54;
+  --secondary: #eeeef6;
+  --secondary-foreground: #191927;
+  --muted: #eeeef6;
+  --muted-foreground: #5a5a72;
+  --accent: #e6e5fb;
+  --accent-foreground: #4338ca;
   --destructive: #c62828;
-  --border: #dce5e5;
-  --input: #dce5e5;
-  --ring: #14b8a6;
+  --border: #e2e2ee;
+  --input: #e2e2ee;
+  --ring: #6366f1;
 
-  /* สีสถานะเพิ่มเติม */
-  --subtle: #64797a;
+  /* สีสถานะเพิ่มเติม — จงใจให้อยู่คนละโทนกับสีแบรนด์ จะได้ไม่สับสนกับสถานะบิล */
+  --subtle: #6b6b85;
   --ok: #15803d;
   --ok-soft: #dcfce7;
   --warn: #b45309;
@@ -38,55 +39,55 @@
   --bad-soft: #fee2e2;
 
   /* แถบเนวิเกชัน */
-  --rail: #0d3d39;
-  --rail-foreground: #cfe9e5;
-  --rail-active: #14b8a6;
+  --rail: #232145;
+  --rail-foreground: #d6d5f0;
+  --rail-active: #a5b4fc;
 
   /* ชุดสีกราฟ — ผ่าน validator ของสกิล dataviz ทั้งช่วงความสว่าง ความอิ่มสี
      และระยะห่างสำหรับตาบอดสี (protan/deutan/tritan) บนพื้นโหมดสว่าง */
-  --chart-1: #0d9488;
+  --chart-1: #4f46e5;
   --chart-2: #b45309;
-  --chart-3: #2563eb;
+  --chart-3: #0d9488;
 
-  --shadow-soft: 0 1px 2px rgb(15 29 28 / 0.04), 0 2px 8px rgb(15 29 28 / 0.04);
-  --shadow-lift: 0 4px 12px rgb(15 29 28 / 0.08), 0 12px 32px rgb(15 29 28 / 0.06);
+  --shadow-soft: 0 1px 2px rgb(25 25 39 / 0.04), 0 2px 8px rgb(25 25 39 / 0.05);
+  --shadow-lift: 0 4px 12px rgb(25 25 39 / 0.08), 0 12px 32px rgb(25 25 39 / 0.07);
 }
 
 .dark {
-  --background: #0b1413;
-  --foreground: #e6efee;
-  --card: #121d1c;
-  --card-foreground: #e6efee;
-  --popover: #121d1c;
-  --popover-foreground: #e6efee;
-  --primary: #2dd4bf;
-  --primary-foreground: #06201d;
-  --secondary: #1b2827;
-  --secondary-foreground: #e6efee;
-  --muted: #1b2827;
-  --muted-foreground: #9bb0ae;
-  --accent: #17332f;
-  --accent-foreground: #7fe7da;
+  --background: #0f0f17;
+  --foreground: #e8e8f4;
+  --card: #171725;
+  --card-foreground: #e8e8f4;
+  --popover: #171725;
+  --popover-foreground: #e8e8f4;
+  --primary: #a5b4fc;
+  --primary-foreground: #16162a;
+  --secondary: #22223a;
+  --secondary-foreground: #e8e8f4;
+  --muted: #22223a;
+  --muted-foreground: #a0a0bd;
+  --accent: #262450;
+  --accent-foreground: #c7d2fe;
   --destructive: #f87171;
-  --border: #263534;
-  --input: #263534;
-  --ring: #2dd4bf;
+  --border: #2c2c46;
+  --input: #2c2c46;
+  --ring: #818cf8;
 
-  --subtle: #8ba1a0;
+  --subtle: #8f8fae;
   --ok: #4ade80;
   --ok-soft: #10301f;
   --warn: #fbbf24;
   --warn-soft: #362707;
   --bad-soft: #3b1a19;
 
-  --rail: #071110;
-  --rail-foreground: #b6d4d0;
-  --rail-active: #2dd4bf;
+  --rail: #0b0b14;
+  --rail-foreground: #c3c2e4;
+  --rail-active: #a5b4fc;
 
   /* โหมดมืดต้องเลือกเฉดใหม่ ไม่ใช่กลับด้านของโหมดสว่าง — ชุดนี้ผ่าน validator บนพื้นมืด */
-  --chart-1: #0ea5a0;
+  --chart-1: #6366f1;
   --chart-2: #d97706;
-  --chart-3: #4f8ef7;
+  --chart-3: #0ea5a0;
 
   --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 8px rgb(0 0 0 / 0.3);
   --shadow-lift: 0 4px 12px rgb(0 0 0 / 0.5), 0 12px 32px rgb(0 0 0 / 0.4);
