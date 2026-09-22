@@ -3,9 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireRole, currentPropertyId } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
 import { MAX_CELLS, MAX_COLS, MIN_COLS, parsePlan } from "@/lib/floorplan";
+import { assertBuildingInScope, assertRoomInScope } from "@/lib/scope";
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const int = (f: FormData, k: string, fallback: number) => {
@@ -14,8 +15,7 @@ const int = (f: FormData, k: string, fallback: number) => {
 };
 
 async function propertyId() {
-  const p = await db.property.findFirstOrThrow({ select: { id: true } });
-  return p.id;
+  return currentPropertyId();
 }
 
 // ---------------------------------------------------------------
@@ -46,6 +46,7 @@ export async function updateBuilding(f: FormData) {
   const floors = int(f, "floors", 1);
   if (!name) redirect(withFlash(`/buildings/${id}`, "err", "ใส่ชื่อตึก"));
 
+  await assertBuildingInScope(id);
   const highest = await db.room.findFirst({ where: { buildingId: id }, orderBy: { floor: "desc" }, select: { floor: true } });
   if (highest && floors < highest.floor) {
     redirect(withFlash(`/buildings/${id}`, "err", `ลดชั้นไม่ได้ — ยังมีห้องอยู่ถึงชั้น ${highest.floor}`));
@@ -59,6 +60,7 @@ export async function updateBuilding(f: FormData) {
 export async function deleteBuilding(f: FormData) {
   await requireRole("OWNER");
   const id = text(f, "id");
+  await assertBuildingInScope(id);
   const rooms = await db.room.count({ where: { buildingId: id } });
   if (rooms > 0) redirect(withFlash(`/buildings/${id}`, "err", `ลบไม่ได้ — ตึกนี้ยังมี ${rooms} ห้อง ลบห้องให้หมดก่อน`));
 
@@ -75,8 +77,7 @@ export async function generateRooms(f: FormData) {
   await requireRole("OWNER");
   const buildingId = text(f, "buildingId");
   const back = `/buildings/${buildingId}`;
-  const building = await db.building.findUnique({ where: { id: buildingId } });
-  if (!building) redirect(withFlash("/buildings", "err", "ไม่พบตึก"));
+  const { building } = await assertBuildingInScope(buildingId);
 
   const from = int(f, "floorFrom", 1);
   const to = int(f, "floorTo", 1);
@@ -122,8 +123,8 @@ export async function generateRooms(f: FormData) {
 export async function deleteRoom(f: FormData) {
   await requireRole("OWNER");
   const id = text(f, "id");
-  const room = await db.room.findUnique({ where: { id }, include: { _count: { select: { contracts: true, maintenance: true } } } });
-  if (!room) redirect(withFlash("/buildings", "err", "ไม่พบห้อง"));
+  await assertRoomInScope(id);
+  const room = await db.room.findUniqueOrThrow({ where: { id }, include: { _count: { select: { contracts: true, maintenance: true } } } });
   const back = `/buildings/${room.buildingId}`;
   if (room._count.contracts > 0) redirect(withFlash(back, "err", `ลบไม่ได้ — ห้อง ${room.number} เคยมีสัญญา ${room._count.contracts} ฉบับ`));
   if (room._count.maintenance > 0) redirect(withFlash(back, "err", `ลบไม่ได้ — ห้อง ${room.number} มีประวัติแจ้งซ่อม`));
@@ -145,6 +146,7 @@ export async function saveFloorPlan(f: FormData) {
   await requireRole("OWNER");
   const buildingId = text(f, "buildingId");
   const back = `/buildings/${buildingId}`;
+  await assertBuildingInScope(buildingId);
 
   let parsed: unknown;
   try {

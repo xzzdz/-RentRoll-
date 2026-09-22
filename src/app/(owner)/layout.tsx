@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export default async function OwnerLayout({ children }: { children: React.ReactNode }) {
   const session = await requireRole("OWNER");
-  const property = await db.property.findFirst({ select: { name: true } });
+  const property = await db.property.findUnique({ where: { id: session.propertyId }, select: { name: true } });
 
   return (
     <>

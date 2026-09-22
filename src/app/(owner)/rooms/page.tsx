@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { RoomStatus } from "@prisma/client";
 import { Banknote, PencilRuler, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { money } from "@/lib/format";
 import { CELL_META, parsePlan, rowsOf } from "@/lib/floorplan";
 import { ROOM_TILE as TILE, ROOM_TILE_OVERDUE as TILE_OVERDUE, roomTileClass } from "@/lib/room-style";
@@ -26,8 +27,8 @@ type RoomTile = {
 
 export default async function RoomsPage({ searchParams }: { searchParams: Promise<{ b?: string }> }) {
   const { b } = await searchParams;
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
-  const buildings = await db.building.findMany({ where: { propertyId: property.id }, orderBy: { sortOrder: "asc" } });
+  const propertyId = await currentPropertyId();
+  const buildings = await db.building.findMany({ where: { propertyId }, orderBy: { sortOrder: "asc" } });
   const building = buildings.find((x) => x.id === b) ?? buildings[0];
 
   if (!building) {

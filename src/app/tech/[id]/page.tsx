@@ -23,8 +23,9 @@ export default async function TechJobPage({ params }: { params: Promise<{ id: st
     },
   });
   if (!job) notFound();
-  // ช่างเห็นเฉพาะงานของตัวเอง เจ้าของเปิดดูได้ทุกงาน
-  if (s.role !== "OWNER" && job.assignedToId !== s.userId) notFound();
+  // ช่างเห็นเฉพาะงานของตัวเอง เจ้าของเปิดดูได้ทุกงานในหอของตัวเอง
+  const inScope = s.role === "OWNER" ? job.room.building.propertyId === s.propertyId : job.assignedToId === s.userId;
+  if (!inScope) notFound();
 
   return (
     <main className="mx-auto grid max-w-md gap-3 px-4 py-6">

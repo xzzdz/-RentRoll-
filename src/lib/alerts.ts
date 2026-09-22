@@ -16,7 +16,7 @@ export async function notifyExpiringContracts(propertyId: string, days: number, 
       orderBy: { endDate: "asc" },
       include: { room: { select: { number: true } }, tenants: { where: { isPrimary: true }, include: { tenant: true } } },
     }),
-    db.user.findMany({ where: { role: "OWNER", isActive: true }, select: { id: true } }),
+    db.user.findMany({ where: { role: "OWNER", isActive: true, propertyId }, select: { id: true } }),
   ]);
   if (contracts.length === 0 || owners.length === 0) return { checked: contracts.length, created: 0 };
 

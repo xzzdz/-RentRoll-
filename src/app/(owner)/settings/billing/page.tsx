@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { PageHead } from "@/components/PageHead";
 import { BillingForm } from "./BillingForm";
 
 export default async function BillingSettingsPage() {
-  const property = await db.property.findFirstOrThrow({ include: { billingSetting: true } });
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() }, include: { billingSetting: true } });
   const st = property.billingSetting;
 
   return (

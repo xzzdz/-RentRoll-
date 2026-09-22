@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireRole, currentPropertyId } from "@/lib/auth";
 import { periodOf } from "@/lib/period";
 import { withFlash } from "@/lib/flash";
 
@@ -26,8 +26,7 @@ const text = (v: FormDataEntryValue | null) => {
 const on = (f: FormData, k: string) => f.get(k) === "on";
 
 async function propertyId() {
-  const p = await db.property.findFirstOrThrow({ select: { id: true } });
-  return p.id;
+  return currentPropertyId();
 }
 
 async function audit(userId: string, entity: string, entityId: string, after: object) {
@@ -226,7 +225,7 @@ export async function deleteFee(f: FormData) {
 export type TeamState = { error?: string } | undefined;
 
 export async function addTechnician(_prev: TeamState, f: FormData): Promise<TeamState> {
-  await requireRole("OWNER");
+  const pid = await propertyId();
   const name = text(f.get("name"));
   const phone = text(f.get("phone"));
   const password = String(f.get("password") ?? "");
@@ -235,7 +234,7 @@ export async function addTechnician(_prev: TeamState, f: FormData): Promise<Team
   if (password.length < 8) return { error: "รหัสผ่านอย่างน้อย 8 ตัวอักษร" };
   if (await db.user.findUnique({ where: { phone } })) return { error: "เบอร์นี้มีบัญชีอยู่แล้ว" };
 
-  await db.user.create({ data: { role: "TECHNICIAN", name, phone, passwordHash: await bcrypt.hash(password, 10) } });
+  await db.user.create({ data: { role: "TECHNICIAN", name, phone, passwordHash: await bcrypt.hash(password, 10), propertyId: pid } });
   revalidatePath("/settings/team");
   redirect(withFlash("/settings/team", "ok", `เพิ่มช่าง ${name} แล้ว`));
 }

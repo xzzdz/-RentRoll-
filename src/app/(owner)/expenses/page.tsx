@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { addMonths, bangkokToday, periodOf } from "@/lib/period";
 import { money, thDate, thPeriod } from "@/lib/format";
 import { EXPENSE_CATEGORY } from "@/lib/expense";
@@ -21,17 +22,17 @@ export default async function ExpensesPage({ searchParams }: { searchParams: Pro
   const { p } = await searchParams;
   const period = parsePeriod(p);
   const next = addMonths(period, 1);
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
 
   const [expenses, buildings, income] = await Promise.all([
     db.expense.findMany({
-      where: { propertyId: property.id, spentAt: { gte: period, lt: next } },
+      where: { propertyId, spentAt: { gte: period, lt: next } },
       orderBy: [{ spentAt: "desc" }, { createdAt: "desc" }],
       include: { building: { select: { name: true } } },
     }),
-    db.building.findMany({ where: { propertyId: property.id }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
+    db.building.findMany({ where: { propertyId }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
     db.payment.aggregate({
-      where: { status: "CONFIRMED", paidAt: { gte: period, lt: next }, invoice: { contract: { room: { building: { propertyId: property.id } } } } },
+      where: { status: "CONFIRMED", paidAt: { gte: period, lt: next }, invoice: { contract: { room: { building: { propertyId } } } } },
       _sum: { amount: true },
     }),
   ]);

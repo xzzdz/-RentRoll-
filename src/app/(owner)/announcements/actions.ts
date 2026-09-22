@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireRole, currentPropertyId } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
+import { assertOwnRow } from "@/lib/scope";
 
 const BACK = "/announcements";
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -28,22 +29,22 @@ function parse(f: FormData) {
 
 export async function createAnnouncement(f: FormData) {
   const session = await requireRole("OWNER");
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const r = parse(f);
   if (r.error) redirect(withFlash(BACK, "err", r.error));
 
   // ปุ่ม "ประกาศเลย" ตั้งเวลาเผยแพร่ทันที ส่วน "เก็บเป็นร่าง" ปล่อยว่างไว้
   const publishNow = f.get("publish") === "1";
   await db.announcement.create({
-    data: { ...r.data!, propertyId: property.id, createdById: session.userId, publishedAt: publishNow ? new Date() : null },
+    data: { ...r.data!, propertyId: propertyId, createdById: session.userId, publishedAt: publishNow ? new Date() : null },
   });
   revalidatePath(BACK);
   redirect(withFlash(BACK, "ok", publishNow ? "ประกาศแล้ว" : "เก็บเป็นฉบับร่างแล้ว"));
 }
 
 export async function updateAnnouncement(f: FormData) {
-  await requireRole("OWNER");
   const id = text(f, "id");
+  await assertOwnRow("announcement", id, "ประกาศ");
   const r = parse(f);
   if (r.error) redirect(withFlash(BACK, "err", r.error));
 
@@ -54,8 +55,8 @@ export async function updateAnnouncement(f: FormData) {
 
 /** สลับระหว่างประกาศกับเก็บกลับเป็นร่าง */
 export async function togglePublish(f: FormData) {
-  await requireRole("OWNER");
   const id = text(f, "id");
+  await assertOwnRow("announcement", id, "ประกาศ");
   const a = await db.announcement.findUnique({ where: { id } });
   if (!a) redirect(withFlash(BACK, "err", "ไม่พบประกาศ"));
 
@@ -66,8 +67,9 @@ export async function togglePublish(f: FormData) {
 }
 
 export async function deleteAnnouncement(f: FormData) {
-  await requireRole("OWNER");
-  await db.announcement.delete({ where: { id: text(f, "id") } });
+  const id = text(f, "id");
+  await assertOwnRow("announcement", id, "ประกาศ");
+  await db.announcement.delete({ where: { id } });
   revalidatePath(BACK);
   redirect(withFlash(BACK, "ok", "ลบประกาศแล้ว"));
 }

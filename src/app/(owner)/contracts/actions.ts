@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth";
+import { assertRoomInScope } from "@/lib/scope";
 import { encrypt } from "@/lib/crypto";
 import { nextDocNo } from "@/lib/docno";
 import { periodOf } from "@/lib/period";
@@ -28,6 +29,7 @@ export async function createContract(_prev: ContractFormState, f: FormData): Pro
   const session = await requireRole("OWNER");
 
   const roomId = str(f, "roomId");
+  if (roomId) await assertRoomInScope(roomId);
   const fullName = str(f, "fullName");
   const phone = str(f, "phone");
   const idCardNo = str(f, "idCardNo").replace(/\D/g, "");

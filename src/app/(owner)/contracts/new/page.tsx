@@ -1,11 +1,12 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { bangkokToday } from "@/lib/period";
 import { PageHead } from "@/components/PageHead";
 import { ContractForm, type FeeOption, type RoomOption } from "./ContractForm";
 
 export default async function NewContractPage({ searchParams }: { searchParams: Promise<{ room?: string }> }) {
   const { room } = await searchParams;
-  const property = await db.property.findFirstOrThrow();
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() } });
 
   const [rooms, feeItems] = await Promise.all([
     db.room.findMany({

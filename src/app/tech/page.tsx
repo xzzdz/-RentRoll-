@@ -12,7 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 // หน้าช่าง — มือถือเป็นหลัก: ดูงานที่ได้รับมอบหมาย เริ่มซ่อม และปิดงาน
 export default async function TechPage() {
   const s = await requireRole("TECHNICIAN", "OWNER");
-  const mine = s.role === "OWNER" ? {} : { assignedToId: s.userId };
+  // เจ้าของเปิดหน้านี้ได้เพื่อดูภาพรวมงาน แต่ต้องจำกัดเฉพาะหอของตัวเอง
+  const mine = s.role === "OWNER" ? { room: { building: { propertyId: s.propertyId } } } : { assignedToId: s.userId };
 
   const [jobs, done] = await Promise.all([
     db.maintenanceRequest.findMany({
@@ -35,7 +36,7 @@ export default async function TechPage() {
           <h1 className="font-display text-xl font-semibold">งานของ{s.name}</h1>
           <p className="text-muted-foreground text-[13px]">
             {jobs.length ? `ค้างอยู่ ${jobs.length} งาน` : "ไม่มีงานค้าง"}
-            {s.role === "OWNER" && " · มุมมองเจ้าของ (เห็นทุกงาน)"}
+            {s.role === "OWNER" && " · มุมมองเจ้าของ (เห็นทุกงานในหอ)"}
           </p>
         </div>
         <form action={logout}>

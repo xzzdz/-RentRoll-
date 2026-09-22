@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, ChevronLeft, ChevronRight, Gauge, ReceiptText, Wrench } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { addMonths, bangkokToday, periodOf } from "@/lib/period";
 import { money, thDate, thMonthShort, thPeriod } from "@/lib/format";
 import { PAYABLE } from "@/lib/invoice";
@@ -20,7 +21,7 @@ const key = (d: Date) => d.toISOString().slice(0, 7);
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
   const { p } = await searchParams;
   const period = parsePeriod(p);
-  const property = await db.property.findFirstOrThrow({ include: { billingSetting: true } });
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() }, include: { billingSetting: true } });
   const today = bangkokToday();
   const thisMonth = periodOf(today);
   const in60 = new Date(today.getTime() + 60 * 86_400_000);

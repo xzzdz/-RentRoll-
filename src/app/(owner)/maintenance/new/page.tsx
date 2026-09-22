@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { bangkokToday } from "@/lib/period";
 import { CATEGORIES } from "@/lib/maintenance";
 import { PageHead } from "@/components/PageHead";
@@ -6,11 +7,11 @@ import { RequestForm, type RoomOption, type TechOption } from "./RequestForm";
 
 export default async function NewMaintenancePage({ searchParams }: { searchParams: Promise<{ room?: string }> }) {
   const { room } = await searchParams;
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
 
   const [rooms, techs] = await Promise.all([
     db.room.findMany({
-      where: { building: { propertyId: property.id } },
+      where: { building: { propertyId } },
       orderBy: [{ building: { sortOrder: "asc" } }, { number: "asc" }],
       include: {
         building: { select: { name: true } },

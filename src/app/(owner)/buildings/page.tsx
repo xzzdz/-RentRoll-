@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { RoomStatus } from "@prisma/client";
 import { Building2, ChevronRight, Layers, LayoutGrid } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { ROOM_BAR, ROOM_TILE } from "@/lib/room-style";
 import { cn } from "@/lib/utils";
 import { PageHead } from "@/components/PageHead";
@@ -15,9 +16,9 @@ export const metadata = { title: "ตึกและชั้น" };
 const ORDER: RoomStatus[] = ["OCCUPIED", "RESERVED", "MAINTENANCE", "VACANT"];
 
 export default async function BuildingsPage() {
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const buildings = await db.building.findMany({
-    where: { propertyId: property.id },
+    where: { propertyId },
     orderBy: { sortOrder: "asc" },
     include: { rooms: { select: { status: true } } },
   });

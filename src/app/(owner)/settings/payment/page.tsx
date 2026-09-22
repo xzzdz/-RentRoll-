@@ -1,5 +1,6 @@
 import { Banknote, QrCode, Save } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { PageHead } from "@/components/PageHead";
 import { Field } from "@/components/Field";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -8,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { savePayment } from "../actions";
 
 export default async function PaymentSettingsPage() {
-  const property = await db.property.findFirstOrThrow({ include: { billingSetting: true } });
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() }, include: { billingSetting: true } });
   const st = property.billingSetting;
 
   return (

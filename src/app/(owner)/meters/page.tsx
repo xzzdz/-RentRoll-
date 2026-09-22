@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { periodOf } from "@/lib/period";
 import { thPeriod } from "@/lib/format";
 import { getRates } from "@/lib/rates";
@@ -11,7 +12,7 @@ import { MeterEntry } from "./MeterEntry";
 
 export default async function MetersPage({ searchParams }: { searchParams: Promise<{ b?: string }> }) {
   const { b } = await searchParams;
-  const property = await db.property.findFirstOrThrow();
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() } });
   const buildings = await db.building.findMany({ where: { propertyId: property.id }, orderBy: { sortOrder: "asc" } });
   const building = buildings.find((x) => x.id === b) ?? buildings[0];
   const period = periodOf();

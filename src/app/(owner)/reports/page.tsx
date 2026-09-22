@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { addMonths, bangkokToday, periodOf } from "@/lib/period";
 import { money, thDate, thMonthShort } from "@/lib/format";
 import { round2 } from "@/lib/billing";
@@ -31,19 +32,19 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const from = parseDay(fromQ, addMonths(thisMonth, -5));
   const to = parseDay(toQ, today);
   const until = new Date(to.getTime() + 86_400_000);
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
 
   const [invoices, payments, expenses] = await Promise.all([
     db.invoice.findMany({
-      where: { status: { not: "VOID" }, contract: { room: { building: { propertyId: property.id } } }, period: { is: { periodMonth: { gte: periodOf(from), lt: until } } } },
+      where: { status: { not: "VOID" }, contract: { room: { building: { propertyId } } }, period: { is: { periodMonth: { gte: periodOf(from), lt: until } } } },
       select: { total: true, paidAmount: true, period: { select: { periodMonth: true } } },
     }),
     db.payment.aggregate({
-      where: { status: "CONFIRMED", paidAt: { gte: from, lt: until }, invoice: { contract: { room: { building: { propertyId: property.id } } } } },
+      where: { status: "CONFIRMED", paidAt: { gte: from, lt: until }, invoice: { contract: { room: { building: { propertyId } } } } },
       _sum: { amount: true },
       _count: true,
     }),
-    db.expense.findMany({ where: { propertyId: property.id, spentAt: { gte: from, lt: until } }, select: { amount: true, spentAt: true } }),
+    db.expense.findMany({ where: { propertyId, spentAt: { gte: from, lt: until } }, select: { amount: true, spentAt: true } }),
   ]);
 
   // สรุปรายเดือนของช่วงที่เลือก

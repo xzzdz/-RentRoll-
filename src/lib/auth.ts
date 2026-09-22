@@ -38,6 +38,15 @@ export async function requireRole(...roles: Role[]): Promise<Session> {
   return s;
 }
 
+/**
+ * รหัสหอของผู้ใช้ปัจจุบัน — ทุก query ฝั่งเจ้าของต้อง scope ด้วยค่านี้
+ * ห้ามดึงหอด้วย findFirst เด็ดขาด ไม่งั้นพอมีหลายหอจะหยิบของคนอื่นมา
+ */
+export async function currentPropertyId(): Promise<string> {
+  const s = await requireRole("OWNER");
+  return s.propertyId;
+}
+
 export function homeFor(role: Role) {
   return role === "OWNER" ? "/dashboard" : role === "TECHNICIAN" ? "/tech" : "/login";
 }

@@ -1,5 +1,6 @@
 import { Save } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { PageHead } from "@/components/PageHead";
 import { Field } from "@/components/Field";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { savePropertyInfo } from "./actions";
 
 export default async function PropertySettingsPage() {
-  const property = await db.property.findFirstOrThrow({ include: { billingSetting: true } });
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() }, include: { billingSetting: true } });
 
   return (
     <form action={savePropertyInfo} className="mx-auto max-w-2xl">

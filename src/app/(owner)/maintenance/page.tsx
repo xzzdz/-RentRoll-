@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { MaintenanceStatus, Prisma } from "@prisma/client";
 import { Plus, Search } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { OPEN_STATUS, pendingCharges } from "@/lib/maintenance";
 import { money, thDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,7 @@ const TABS: { key: string; label: string; status: MaintenanceStatus[] }[] = [
 export default async function MaintenancePage({ searchParams }: { searchParams: Promise<{ q?: string; tab?: string }> }) {
   const { q = "", tab = "open" } = await searchParams;
   const current = TABS.find((t) => t.key === tab) ?? TABS[0];
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
 
   const search = q.trim();
   const where: Prisma.MaintenanceRequestWhereInput = {
@@ -48,7 +49,7 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
     db.maintenanceRequest.count({ where: { status: "NEW" } }),
     db.maintenanceRequest.count({ where: { status: "IN_PROGRESS" } }),
     db.maintenanceRequest.count({ where: { status: { in: OPEN_STATUS }, priority: "URGENT" } }),
-    pendingCharges(property.id),
+    pendingCharges(propertyId),
   ]);
 
   const kpis = [
@@ -68,17 +69,17 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
         </Button>
       </PageHead>
 
-      <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.label} className="bg-card rounded-xl border px-4 py-3.5">
             <div className="eyebrow">{k.label}</div>
-            <div className={`mt-1 font-display text-[26px] leading-tight font-semibold tabular-nums ${k.tone ?? ""}`}>{k.value}</div>
-            <div className="text-muted-foreground text-[12.5px]">{k.sub}</div>
+            <div className={`font-display mt-1 text-[22px] leading-tight font-semibold tabular-nums lg:text-[26px] ${k.tone ?? ""}`}>{k.value}</div>
+            <div className="text-muted-foreground text-[12px]">{k.sub}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-card rounded-xl border">
+      <div className="bg-card rounded-xl border lg:pb-0">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <nav className="bg-muted inline-flex gap-0.5 rounded-lg p-[3px]">
             {TABS.map((t) => (
@@ -102,7 +103,30 @@ export default async function MaintenancePage({ searchParams }: { searchParams: 
           </form>
         </div>
 
-        <Table>
+        {/* มือถือ: การ์ดต่องาน */}
+        <div className="grid gap-2 p-3 lg:hidden">
+          {jobs.map((j) => (
+            <Link key={j.id} href={`/maintenance/${j.id}`} className="grid gap-1.5 rounded-xl border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <b className="font-display num text-[15px]">{j.room.number}</b>
+                <StatusBadge map={MAINTENANCE_STATUS[j.status]} />
+                {j.priority === "URGENT" && <Badge variant="bad">{PRIORITY.URGENT[1]}</Badge>}
+                {j.cost && <span className="num ml-auto text-[14px] font-semibold">{money(j.cost.toNumber(), 0)}</span>}
+              </div>
+              <span className="text-[13.5px]">{j.title}</span>
+              <div className="text-subtle flex flex-wrap items-center gap-x-2 text-[11.5px]">
+                <span>{j.category}</span>
+                <span className="num">· {j.ticketNo}</span>
+                <span>· {thDateTime(j.createdAt, false)}</span>
+                <span className={cn(!j.assignedTo && "text-warn")}>· {j.assignedTo?.name ?? "ยังไม่มอบหมาย"}</span>
+                {j.chargeTenant && <span>· เก็บผู้เช่า</span>}
+              </div>
+            </Link>
+          ))}
+          {jobs.length === 0 && <p className="text-muted-foreground py-8 text-center">ไม่พบงานแจ้งซ่อม</p>}
+        </div>
+
+        <Table className="hidden lg:table">
           <TableHeader>
             <TableRow>
               <TableHead>ห้อง</TableHead>

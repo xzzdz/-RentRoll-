@@ -8,12 +8,14 @@ import { requireRole } from "@/lib/auth";
 import { periodOf } from "@/lib/period";
 import { thPeriod } from "@/lib/format";
 import { withFlash } from "@/lib/flash";
+import { assertContractInScope, assertRoomInScope } from "@/lib/scope";
 
 export type MoveOutState = { error?: string } | undefined;
 
 export async function moveOut(_prev: MoveOutState, f: FormData): Promise<MoveOutState> {
   const session = await requireRole("OWNER");
   const contractId = String(f.get("contractId") ?? "");
+  await assertContractInScope(contractId);
   const d = String(f.get("moveOutDate") ?? "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return { error: "เลือกวันย้ายออก" };
   const moveOutDate = new Date(`${d}T00:00:00Z`);
@@ -66,6 +68,7 @@ const ALLOWED: RoomStatus[] = ["VACANT", "RESERVED", "MAINTENANCE"];
 export async function setRoomStatus(f: FormData) {
   const session = await requireRole("OWNER");
   const roomId = String(f.get("roomId") ?? "");
+  await assertRoomInScope(roomId);
   const status = String(f.get("status") ?? "") as RoomStatus;
   const room = await db.room.findUnique({ where: { id: roomId }, include: { contracts: { where: { status: "ACTIVE" } } } });
   if (!room) redirect(withFlash("/rooms", "err", "ไม่พบห้อง"));

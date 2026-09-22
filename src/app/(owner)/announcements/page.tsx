@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { bangkokToday } from "@/lib/period";
 import { thDate, thDateTime } from "@/lib/format";
 import { PageHead } from "@/components/PageHead";
@@ -8,16 +9,16 @@ import { AnnouncementRow } from "./AnnouncementRow";
 export const metadata = { title: "บอร์ดประกาศ" };
 
 export default async function AnnouncementsPage() {
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const today = bangkokToday();
 
   const [items, buildings] = await Promise.all([
     db.announcement.findMany({
-      where: { propertyId: property.id },
+      where: { propertyId },
       orderBy: [{ pinned: "desc" }, { publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
       include: { building: { select: { name: true } } },
     }),
-    db.building.findMany({ where: { propertyId: property.id }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
+    db.building.findMany({ where: { propertyId }, orderBy: { sortOrder: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const live = items.filter((a) => a.publishedAt && (!a.expiresAt || a.expiresAt >= today)).length;

@@ -4,9 +4,10 @@ import type { PaymentMethod } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireRole, currentPropertyId } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
 import { applyLateFee, BillingError, generateDrafts, issueInvoices, recordPayment, voidInvoice } from "@/lib/invoice";
+import { assertInvoiceInScope } from "@/lib/scope";
 
 const periodParam = (f: FormData) => {
   const p = String(f.get("period") ?? "");
@@ -17,7 +18,7 @@ const periodParam = (f: FormData) => {
 export async function generateDraftsAction(f: FormData) {
   await requireRole("OWNER");
   const { key, date } = periodParam(f);
-  const property = await db.property.findFirstOrThrow();
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() } });
   const r = await generateDrafts(property.id, date);
   revalidatePath("/billing");
   const parts = [`สร้างใหม่ ${r.created}`, `อัปเดต ${r.updated}`];
@@ -29,7 +30,7 @@ export async function generateDraftsAction(f: FormData) {
 export async function issueAllAction(f: FormData) {
   await requireRole("OWNER");
   const { key, date } = periodParam(f);
-  const property = await db.property.findFirstOrThrow();
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() } });
   const n = await issueInvoices(property.id, { period: date });
   revalidatePath("/billing");
   redirect(withFlash(`/billing?p=${key}`, "ok", n ? `ส่งบิลแล้ว ${n} ใบ` : "ไม่มีบิลร่างให้ส่ง"));
@@ -38,7 +39,8 @@ export async function issueAllAction(f: FormData) {
 export async function issueOneAction(f: FormData) {
   await requireRole("OWNER");
   const id = String(f.get("invoiceId"));
-  const property = await db.property.findFirstOrThrow();
+  await assertInvoiceInScope(id);
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() } });
   await issueInvoices(property.id, { ids: [id] });
   revalidatePath("/billing");
   redirect(withFlash(`/billing/${id}`, "ok", "ส่งบิลแล้ว"));
@@ -47,6 +49,7 @@ export async function issueOneAction(f: FormData) {
 export async function lateFeeAction(f: FormData) {
   await requireRole("OWNER");
   const id = String(f.get("invoiceId"));
+  await assertInvoiceInScope(id);
   const fee = await applyLateFee(id);
   revalidatePath(`/billing/${id}`);
   redirect(withFlash(`/billing/${id}`, "ok", fee ? `คิดค่าปรับ ${fee.days} วัน = ${fee.amount.toLocaleString("th-TH")} บาท` : "บิลนี้ยังไม่เกินกำหนด"));
@@ -55,6 +58,7 @@ export async function lateFeeAction(f: FormData) {
 export async function voidAction(f: FormData) {
   const session = await requireRole("OWNER");
   const id = String(f.get("invoiceId"));
+  await assertInvoiceInScope(id);
   const reason = String(f.get("reason") ?? "").trim();
   const inv = await db.invoice.findUnique({ where: { id }, include: { period: true } });
   const back = inv?.period ? `/billing?p=${inv.period.periodMonth.toISOString().slice(0, 7)}` : "/billing";
@@ -74,6 +78,7 @@ const METHODS: PaymentMethod[] = ["CASH", "TRANSFER", "PROMPTPAY"];
 export async function paymentAction(_prev: PaymentState, f: FormData): Promise<PaymentState> {
   const session = await requireRole("OWNER");
   const id = String(f.get("invoiceId"));
+  await assertInvoiceInScope(id);
   const amount = Number(f.get("amount"));
   const method = String(f.get("method")) as PaymentMethod;
   const d = String(f.get("paidAt") ?? "");

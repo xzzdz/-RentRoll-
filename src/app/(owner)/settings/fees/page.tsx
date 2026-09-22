@@ -1,13 +1,14 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { money } from "@/lib/format";
 import { PageHead } from "@/components/PageHead";
 import { AddFeeForm } from "./AddFeeForm";
 import { FeeRow } from "./FeeRow";
 
 export default async function FeesSettingsPage() {
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const fees = await db.feeItem.findMany({
-    where: { propertyId: property.id },
+    where: { propertyId: propertyId },
     orderBy: [{ isActive: "desc" }, { name: "asc" }],
     include: { _count: { select: { contracts: true } } },
   });

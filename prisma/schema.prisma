@@ -145,6 +145,9 @@ enum NotifyStatus {
 
 model User {
   id           String   @id @default(cuid())
+  // หอที่ผู้ใช้สังกัด — OWNER/TECHNICIAN ต้องมีเสมอ ส่วน TENANT ผูกผ่าน Tenant แทน
+  // ทุก query ฝั่งเจ้าของต้อง scope ด้วยค่านี้ ไม่งั้นจะเห็นข้อมูลข้ามหอ
+  propertyId   String?
   role         Role
   name         String
   phone        String?  @unique
@@ -165,6 +168,9 @@ model User {
   auditLogs           AuditLog[]
   expenses            Expense[]
   announcements       Announcement[]
+  property            Property?            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId, role])
 }
 
 // ---------------------------------------------------------------
@@ -190,6 +196,7 @@ model Property {
   docSequences    DocumentSequence[]
   expenses        Expense[]
   announcements   Announcement[]
+  users           User[]
 }
 
 model Building {

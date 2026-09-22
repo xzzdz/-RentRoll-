@@ -43,8 +43,8 @@ function parseCost(cost: number | null | undefined) {
   return round2(cost);
 }
 
-async function assertTechnician(id: string) {
-  const tech = await db.user.findFirst({ where: { id, role: "TECHNICIAN", isActive: true } });
+async function assertTechnician(id: string, propertyId: string) {
+  const tech = await db.user.findFirst({ where: { id, role: "TECHNICIAN", isActive: true, propertyId } });
   if (!tech) throw new MaintenanceError("ไม่พบช่างที่เลือก");
   return tech;
 }
@@ -76,7 +76,7 @@ export async function createRequest(
   if (!room) throw new MaintenanceError("ไม่พบห้อง");
 
   const assignedToId = input.assignedToId || null;
-  if (assignedToId) await assertTechnician(assignedToId);
+  if (assignedToId) await assertTechnician(assignedToId, room.building.propertyId);
 
   const status: MaintenanceStatus = assignedToId ? "ASSIGNED" : "NEW";
   return db.$transaction(async (tx) => {
@@ -108,11 +108,11 @@ export async function assignJob(
   input: { requestId: string; technicianId: string; scheduledAt?: string | null; comment?: string | null },
   userId: string,
 ) {
-  const req = await db.maintenanceRequest.findUnique({ where: { id: input.requestId } });
+  const req = await db.maintenanceRequest.findUnique({ where: { id: input.requestId }, include: { room: { include: { building: { select: { propertyId: true } } } } } });
   if (!req) throw new MaintenanceError("ไม่พบงานซ่อม");
   if (!OPEN_STATUS.includes(req.status)) throw new MaintenanceError("งานนี้ปิดแล้ว");
 
-  const tech = await assertTechnician(input.technicianId);
+  const tech = await assertTechnician(input.technicianId, req.room.building.propertyId);
   const toStatus: MaintenanceStatus = req.status === "NEW" ? "ASSIGNED" : req.status;
   const reassigned = req.assignedToId && req.assignedToId !== tech.id;
 

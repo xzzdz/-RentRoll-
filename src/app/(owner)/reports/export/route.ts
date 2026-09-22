@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { getSession, currentPropertyId } from "@/lib/auth";
 import { csvResponse, toCsv } from "@/lib/csv";
 import { EXPENSE_CATEGORY } from "@/lib/expense";
 import { thDate } from "@/lib/format";
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
   // ให้ช่วงวันที่รวมวันสุดท้ายด้วย
   const until = new Date(to.getTime() + 86_400_000);
 
-  const property = await db.property.findFirstOrThrow({ select: { id: true, name: true } });
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() }, select: { id: true, name: true } });
   const scope = { contract: { room: { building: { propertyId: property.id } } } };
   const range = `${q.get("from")}_ถึง_${q.get("to")}`;
 

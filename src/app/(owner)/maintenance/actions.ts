@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
 import { assignJob, changeStatus, createRequest, MaintenanceError, updateCharge } from "@/lib/maintenance";
+import { assertMaintenanceInScope, assertRoomInScope } from "@/lib/scope";
 
 const PRIORITIES: Priority[] = ["LOW", "NORMAL", "URGENT"];
 
@@ -26,6 +27,8 @@ export async function createAction(_prev: FormState, f: FormData): Promise<FormS
   const session = await requireRole("OWNER");
   const priority = str(f, "priority") as Priority;
   if (!PRIORITIES.includes(priority)) return { error: "เลือกความเร่งด่วน" };
+
+  await assertRoomInScope(str(f, "roomId"));
 
   let id: string;
   try {
@@ -54,6 +57,7 @@ export async function createAction(_prev: FormState, f: FormData): Promise<FormS
 export async function assignAction(_prev: FormState, f: FormData): Promise<FormState> {
   const session = await requireRole("OWNER");
   const requestId = str(f, "requestId");
+  await assertMaintenanceInScope(requestId);
   let name: string;
   try {
     const tech = await assignJob(
@@ -73,6 +77,7 @@ export async function assignAction(_prev: FormState, f: FormData): Promise<FormS
 export async function statusAction(f: FormData) {
   const session = await requireRole("OWNER");
   const requestId = str(f, "requestId");
+  await assertMaintenanceInScope(requestId);
   const to = str(f, "to") as MaintenanceStatus;
   try {
     await changeStatus({ requestId, to, userId: session.userId, actorRole: "OWNER", comment: str(f, "comment") || null });
@@ -87,6 +92,7 @@ export async function statusAction(f: FormData) {
 export async function completeAction(_prev: FormState, f: FormData): Promise<FormState> {
   const session = await requireRole("OWNER");
   const requestId = str(f, "requestId");
+  await assertMaintenanceInScope(requestId);
   let charged = false;
   try {
     const r = await changeStatus({
@@ -111,6 +117,7 @@ export async function completeAction(_prev: FormState, f: FormData): Promise<For
 export async function cancelAction(_prev: FormState, f: FormData): Promise<FormState> {
   const session = await requireRole("OWNER");
   const requestId = str(f, "requestId");
+  await assertMaintenanceInScope(requestId);
   const comment = str(f, "comment");
   if (!comment) return { error: "ระบุเหตุผลที่ยกเลิก" };
   try {
@@ -126,6 +133,7 @@ export async function cancelAction(_prev: FormState, f: FormData): Promise<FormS
 export async function chargeAction(_prev: FormState, f: FormData): Promise<FormState> {
   const session = await requireRole("OWNER");
   const requestId = str(f, "requestId");
+  await assertMaintenanceInScope(requestId);
   try {
     await updateCharge({ requestId, cost: costOf(f), chargeTenant: f.get("chargeTenant") === "on", userId: session.userId });
   } catch (e) {

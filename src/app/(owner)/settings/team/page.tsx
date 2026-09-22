@@ -10,7 +10,7 @@ import { UserActions } from "./UserActions";
 export default async function TeamSettingsPage() {
   const session = await requireRole("OWNER");
   const users = await db.user.findMany({
-    where: { role: { in: ["OWNER", "TECHNICIAN"] } },
+    where: { propertyId: session.propertyId, role: { in: ["OWNER", "TECHNICIAN"] } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
     include: { _count: { select: { assignedJobs: { where: { status: { in: ["ASSIGNED", "IN_PROGRESS"] } } } } } },
   });

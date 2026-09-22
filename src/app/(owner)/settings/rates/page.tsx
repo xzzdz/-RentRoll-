@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { getRates } from "@/lib/rates";
 import { periodOf } from "@/lib/period";
 import { thPeriod } from "@/lib/format";
@@ -6,9 +7,9 @@ import { PageHead } from "@/components/PageHead";
 import { RatesForm } from "./RatesForm";
 
 export default async function RatesSettingsPage() {
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const period = periodOf();
-  const rates = await getRates(property.id, period);
+  const rates = await getRates(propertyId, period);
 
   return (
     <div className="mx-auto max-w-2xl">

@@ -73,6 +73,9 @@ async function main() {
     },
     include: { feeItems: true },
   });
+  // ผูกบัญชีเข้ากับหอ — ระบบ scope ทุก query ด้วย propertyId ถ้าไม่ผูกจะล็อกอินไม่ได้
+  await db.user.updateMany({ where: { id: { in: [owner.id, tech.id] } }, data: { propertyId: property.id } });
+
   const defaultFees = property.feeItems.filter((f) => f.isDefault);
 
   const [fan, air, studio] = await Promise.all([

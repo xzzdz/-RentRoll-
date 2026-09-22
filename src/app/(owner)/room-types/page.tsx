@@ -1,12 +1,13 @@
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { PageHead } from "@/components/PageHead";
 import { RoomTypeCard } from "./RoomTypeCard";
 import { AddRoomTypeForm } from "./AddRoomTypeForm";
 
 export default async function RoomTypesPage() {
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const types = await db.roomType.findMany({
-    where: { propertyId: property.id },
+    where: { propertyId },
     orderBy: { baseRent: "asc" },
     include: { _count: { select: { rooms: true } } },
   });

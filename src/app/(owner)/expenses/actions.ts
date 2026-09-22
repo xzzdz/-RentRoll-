@@ -4,9 +4,10 @@ import type { ExpenseCategory } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { requireRole } from "@/lib/auth";
+import { requireRole, currentPropertyId } from "@/lib/auth";
 import { withFlash } from "@/lib/flash";
 import { EXPENSE_CATEGORIES } from "@/lib/expense";
+import { assertOwnRow } from "@/lib/scope";
 
 const text = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const back = (f: FormData) => {
@@ -39,19 +40,19 @@ function parse(f: FormData) {
 
 export async function createExpense(f: FormData) {
   const session = await requireRole("OWNER");
-  const property = await db.property.findFirstOrThrow({ select: { id: true } });
+  const propertyId = await currentPropertyId();
   const r = parse(f);
   if (r.error) redirect(withFlash(back(f), "err", r.error));
 
-  await db.expense.create({ data: { ...r.data!, propertyId: property.id, createdById: session.userId } });
+  await db.expense.create({ data: { ...r.data!, propertyId: propertyId, createdById: session.userId } });
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
   redirect(withFlash(back(f), "ok", "บันทึกรายจ่ายแล้ว"));
 }
 
 export async function updateExpense(f: FormData) {
-  await requireRole("OWNER");
   const id = text(f, "id");
+  await assertOwnRow("expense", id, "รายจ่าย");
   const r = parse(f);
   if (r.error) redirect(withFlash(back(f), "err", r.error));
 
@@ -62,8 +63,9 @@ export async function updateExpense(f: FormData) {
 }
 
 export async function deleteExpense(f: FormData) {
-  await requireRole("OWNER");
-  await db.expense.delete({ where: { id: text(f, "id") } });
+  const id = text(f, "id");
+  await assertOwnRow("expense", id, "รายจ่าย");
+  await db.expense.delete({ where: { id } });
   revalidatePath("/expenses");
   revalidatePath("/dashboard");
   redirect(withFlash(back(f), "ok", "ลบรายจ่ายแล้ว"));

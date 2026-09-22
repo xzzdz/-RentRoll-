@@ -19,8 +19,10 @@ export async function login(_prev: LoginState, formData: FormData): Promise<Logi
   });
   const ok = user?.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
   if (!user || !ok) return { error: "อีเมล/เบอร์โทร หรือรหัสผ่านไม่ถูกต้อง" };
+  // บัญชีที่ยังไม่ผูกหอเข้าระบบไม่ได้ ไม่งั้นจะไม่รู้ว่าต้องแสดงข้อมูลของหอไหน
+  if (!user.propertyId) return { error: "บัญชีนี้ยังไม่ได้ผูกกับหอพัก ติดต่อเจ้าของหอเพื่อเพิ่มบัญชีใหม่" };
 
-  await createSession({ userId: user.id, role: user.role, name: user.name });
+  await createSession({ userId: user.id, role: user.role, name: user.name, propertyId: user.propertyId });
   // กัน open redirect: รับเฉพาะ path ภายใน
   redirect(next.startsWith("/") && !next.startsWith("//") ? next : homeFor(user.role));
 }

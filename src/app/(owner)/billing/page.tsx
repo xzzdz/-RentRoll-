@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, FilePlus2, Send } from "lucide-react";
 import { db } from "@/lib/db";
+import { currentPropertyId } from "@/lib/auth";
 import { addMonths, periodOf } from "@/lib/period";
 import { money, thDate, thPeriod } from "@/lib/format";
 import { loadBillingRows } from "@/lib/invoice";
@@ -18,7 +19,7 @@ const key = (d: Date) => d.toISOString().slice(0, 7);
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
   const { p } = await searchParams;
   const period = p && /^\d{4}-\d{2}$/.test(p) ? new Date(`${p}-01T00:00:00Z`) : periodOf();
-  const property = await db.property.findFirstOrThrow({ include: { billingSetting: true } });
+  const property = await db.property.findUniqueOrThrow({ where: { id: await currentPropertyId() }, include: { billingSetting: true } });
 
   const [rows, bp, invoices] = await Promise.all([
     loadBillingRows(property.id, period),
@@ -80,17 +81,66 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
         </form>
       </PageHead>
 
-      <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="bg-card rounded-xl border px-4 py-3.5">
             <div className="eyebrow">{s.label}</div>
-            <div className="mt-1 font-display text-[24px] leading-tight font-semibold tabular-nums">{s.value}</div>
-            <div className="text-muted-foreground text-[12.5px]">{s.sub}</div>
+            <div className="font-display mt-1 text-[22px] leading-tight font-semibold tabular-nums lg:text-[24px]">{s.value}</div>
+            <div className="text-muted-foreground text-[12px]">{s.sub}</div>
           </div>
         ))}
       </div>
 
-      <div className="bg-card rounded-xl border">
+      {/* มือถือ: การ์ดต่อห้อง — ตาราง 7 คอลัมน์ใช้บนจอเล็กไม่ได้ */}
+      <div className="grid gap-2 lg:hidden">
+        {rows.map((r) => {
+          const due = r.invoice ? dueById.get(r.invoice.id) : null;
+          return (
+            <div key={r.contractId} className="bg-card grid gap-1.5 rounded-xl border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link href={`/rooms/${r.roomId}`} className="font-display num text-lg font-bold hover:underline">
+                  {r.roomNumber}
+                </Link>
+                {r.invoice ? (
+                  <StatusBadge map={INVOICE_STATUS[r.invoice.status]} />
+                ) : r.bill ? (
+                  <Badge variant="outline">พร้อมสร้างบิล</Badge>
+                ) : (
+                  <Link href="/meters">
+                    <Badge variant="warn">{r.missing}</Badge>
+                  </Link>
+                )}
+                {r.movingOut && <Badge variant="warn">บิลย้ายออก</Badge>}
+                <span className="num ml-auto text-[15px] font-semibold">
+                  {r.invoice ? money(r.invoice.total) : r.bill ? money(r.bill.total) : "—"}
+                </span>
+              </div>
+              <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-[13px]">
+                <span>{r.tenantName}</span>
+                {r.invoice && (
+                  <Link href={`/billing/${r.invoice.id}`} className="text-primary num hover:underline">
+                    {r.invoice.invoiceNo}
+                  </Link>
+                )}
+              </div>
+              <div className="text-subtle flex flex-wrap items-center gap-x-2 text-[11.5px]">
+                {due && <span>ครบกำหนด {thDate(due)}</span>}
+                {r.invoice && r.invoice.paidAmount > 0 && (
+                  <span>
+                    · ชำระแล้ว <span className="num">{money(r.invoice.paidAmount)}</span>
+                  </span>
+                )}
+                {!r.invoice && r.bill && <span>ยอดประมาณการจากเลขมิเตอร์</span>}
+              </div>
+            </div>
+          );
+        })}
+        {rows.length === 0 && (
+          <p className="bg-card text-muted-foreground rounded-xl border border-dashed p-8 text-center">ไม่มีสัญญาในรอบนี้</p>
+        )}
+      </div>
+
+      <div className="bg-card hidden rounded-xl border lg:block">
         <Table>
           <TableHeader>
             <TableRow>
