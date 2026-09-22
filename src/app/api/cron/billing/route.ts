@@ -12,6 +12,9 @@ import { notifyExpiringContracts } from "@/lib/alerts";
  *   - ทุกวัน → แจ้งเตือนสัญญาที่ใกล้หมดอายุ (แจ้งสัญญาละครั้ง)
  * ป้องกันด้วย header  Authorization: Bearer <CRON_SECRET>
  */
+// สร้างบิลทั้งหอในรอบเดียว กินเวลากว่าค่าเริ่มต้นของ serverless (60 วินาทีคือเพดานของแพ็กฟรี Vercel)
+export const maxDuration = 60;
+
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
