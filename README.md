@@ -31,8 +31,8 @@ npm run dev
 
 | บัญชี | ล็อกอิน | รหัสผ่าน |
 |---|---|---|
-| เจ้าของ | owner@dorm.local | changeme123 |
-| ช่าง | 0800000001 | changeme123 |
+| เจ้าของ | admin@gmail.com | pass123 |
+| ช่าง | 1234567890 | pass123 |
 
 > ตอนขึ้น production ให้สุ่ม `AUTH_SECRET` ใหม่และเปลี่ยนรหัสผ่านเริ่มต้น
 
